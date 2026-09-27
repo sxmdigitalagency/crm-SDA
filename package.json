@@ -5,14 +5,14 @@
   "type": "module",
   "description": "CRM + générateur de devis et factures — SDA Digital Agency",
   "scripts": {
-    "dev": "wrangler pages dev public --port 8788",
+    "dev": "npm run build && wrangler pages dev public --port 8788",
     "db:migrate:local": "wrangler d1 migrations apply crm-sda --local",
     "db:seed:local": "node scripts/seed-demo.mjs",
     "db:migrate:remote": "wrangler d1 migrations apply crm-sda --remote",
     "hash-password": "node scripts/hash-password.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.browser.json",
     "deploy": "wrangler pages deploy public",
-    "build": "node scripts/build-icons.mjs",
+    "build": "node scripts/build-icons.mjs && esbuild shared/pdf/browser.ts --bundle --format=esm --target=es2020 --minify --legal-comments=eof --outfile=public/js/vendor/pdf.js",
     "build:d1-setup": "node scripts/build-d1-setup.mjs"
   },
   "dependencies": {
@@ -23,6 +23,7 @@
     "@cloudflare/workers-types": "^5.20260925.1",
     "@fontsource/archivo-black": "^5.3.0",
     "@fontsource/space-grotesk": "^5.3.0",
+    "esbuild": "^0.28.2",
     "geist": "^1.7.2",
     "lucide-static": "^1.48.0",
     "typescript": "^5.6.0",

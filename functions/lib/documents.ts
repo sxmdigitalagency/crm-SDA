@@ -2,8 +2,10 @@ import { HttpError, str } from './http';
 
 export type DocType = 'quote' | 'invoice';
 
-export const CURRENCIES = ['EUR', 'USD'] as const;
-export type Currency = (typeof CURRENCIES)[number];
+import type { Currency, Settings } from '../../shared/types';
+export type { Currency, Settings };
+
+export const CURRENCIES = ['EUR', 'USD'] as const satisfies readonly Currency[];
 
 export function parseCurrency(value: unknown, fallback: Currency): Currency {
   return CURRENCIES.includes(value as Currency) ? (value as Currency) : fallback;
@@ -127,28 +129,6 @@ export async function nextNumber(db: D1Database, type: DocType, prefix: string, 
   return `${prefix}-${year}-${String(row.value).padStart(4, '0')}`;
 }
 
-export interface Settings {
-  company_name: string;
-  company_address: string;
-  company_email: string;
-  company_phone: string;
-  company_website: string;
-  owner_name: string;
-  legal_form: string;
-  siret: string;
-  vat_number: string;
-  iban: string;
-  tax_label: string;
-  tax_rate: number;
-  default_currency: Currency;
-  tax_exempt_mention: string;
-  quote_prefix: string;
-  invoice_prefix: string;
-  quote_validity_days: number;
-  payment_terms_days: number;
-  quote_terms: string;
-  invoice_terms: string;
-}
 
 export async function getSettings(db: D1Database): Promise<Settings> {
   const s = await db.prepare('SELECT * FROM settings WHERE id = 1').first<Settings>();

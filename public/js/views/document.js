@@ -75,8 +75,8 @@ export async function render(root, { match, query, navigate }) {
   function actionsFor() {
     if (!id) return html`<button class="btn primary wide" data-save>${ico('check')}Créer ${isQuote ? 'le devis' : 'le brouillon'}</button>`;
     const pdf = html`<div class="btn-row">
-      <a class="btn" href="/api${endpoint}/${id}/pdf" target="_blank" rel="noopener">${ico('eye')}Aperçu PDF</a>
-      <a class="btn icon-only" href="/api${endpoint}/${id}/pdf?download=1" download aria-label="Télécharger le PDF">${ico('download')}</a>
+      <button class="btn" data-pdf="view">${ico('eye')}Aperçu PDF</button>
+      <button class="btn icon-only" data-pdf="download" aria-label="Télécharger le PDF" title="Télécharger le PDF">${ico('download')}</button>
       <button class="btn icon-only" data-mail aria-label="Préparer un email">${ico('mail')}</button></div>`;
     if (isQuote) {
       const byStatus = {
@@ -311,6 +311,24 @@ export async function render(root, { match, query, navigate }) {
       await busy(b, async () => {
         try { const r = await api.put(`/invoices/${id}`, { action: 'issue' }); toast(`Facture ${r.number} émise`); navigate(`${base}/${id}`, { replace: true }); }
         catch (e2) { toastError(e2); }
+      });
+    } else if (b.matches('[data-pdf]')) {
+      // L'onglet est ouvert tout de suite (dans le geste de l'utilisateur) pour ne pas être bloqué comme pop-up.
+      const tab = b.dataset.pdf === 'view' ? window.open('', '_blank') : null;
+      if (tab) tab.document.title = 'Génération du PDF…';
+      await busy(b, async () => {
+        try {
+          if (dirty && !(await save())) { tab?.close(); return; }
+          const { generatePdf } = await import('/js/vendor/pdf.js');
+          const { blob, filename } = await generatePdf(kind, id);
+          const url = URL.createObjectURL(blob);
+          if (tab) tab.location.href = url;
+          else {
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
+          }
+          setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } catch (e2) { tab?.close(); toastError(e2); }
       });
     } else if (b.matches('[data-mail]')) {
       const client = clients.find((c) => c.id === Number(d.client_id));

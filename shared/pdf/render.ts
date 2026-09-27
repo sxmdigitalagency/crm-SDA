@@ -1,11 +1,14 @@
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, PDFFont, PDFImage, PDFPage, rgb, setCharacterSpacing } from 'pdf-lib';
-import type { Settings } from './documents';
+import type { Settings } from '../types';
 
 /**
  * Gabarit PDF « SXM Digital » : reproduit le modèle de devis de l'agence
  * (bandeau crème + logo, Archivo Black / Space Grotesk, vert pétrole et corail).
  * Coordonnées exprimées depuis le HAUT de la page (comme le modèle), converties pour pdf-lib.
+ *
+ * Exécuté dans le NAVIGATEUR (bundle public/js/vendor/pdf.js) : le sous-ensemblage des polices
+ * coûte ~450 ms de CPU, bien au-delà des 10 ms de l'offre gratuite Cloudflare Workers.
  */
 
 export interface PdfLine {
@@ -225,7 +228,9 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
     text(heading, x, 154.5, SECTION);
     let base = 174.8;
     for (const l of wrap(name, maxW, { font: fonts.bold, size: 10.5 })) { text(l, x, base, { font: fonts.bold, size: 10.5 }); base += 13.4; }
-    for (const line of lines) for (const l of wrap(line, maxW)) { text(l, x, base); base += 13.8; }
+    // « email · téléphone » trop long : une ligne chacun plutôt qu'un numéro coupé en deux.
+    const fitted = lines.flatMap((line) => (line.includes(' · ') && width(line) > maxW ? line.split(' · ') : [line]));
+    for (const line of fitted) for (const l of wrap(line, maxW)) { text(l, x, base); base += 13.8; }
     return base - 13.8;
   };
   const lastL = party(L, 'ÉMETTEUR', s.company_name, emitter, 312 - L - 12);
@@ -419,30 +424,4 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
   });
 
   return pdf.save();
-}
-
-/** Charge (une fois par isolat) les polices et le logo depuis les fichiers statiques du site. */
-let assetsCache: Promise<PdfAssets> | null = null;
-export function loadPdfAssets(assets: Fetcher, origin: string): Promise<PdfAssets> {
-  assetsCache ??= (async () => {
-    const entries = await Promise.all(
-      Object.entries(PDF_ASSET_PATHS).map(async ([key, path]) => {
-        const res = await assets.fetch(new URL(path, origin));
-        if (!res.ok) throw new Error(`Ressource PDF introuvable : ${path} (${res.status})`);
-        return [key, new Uint8Array(await res.arrayBuffer())] as const;
-      }),
-    );
-    return Object.fromEntries(entries) as unknown as PdfAssets;
-  })().catch((err) => { assetsCache = null; throw err; });
-  return assetsCache;
-}
-
-export function pdfResponse(bytes: Uint8Array, filename: string, inline: boolean): Response {
-  return new Response(bytes, {
-    headers: {
-      'content-type': 'application/pdf',
-      'content-disposition': `${inline ? 'inline' : 'attachment'}; filename="${filename.replace(/[^A-Za-z0-9._-]/g, '_')}"`,
-      'cache-control': 'private, no-store',
-    },
-  });
 }

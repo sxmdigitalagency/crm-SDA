@@ -4,7 +4,7 @@ Mini-CRM mono-utilisateur pour SDA Digital Agency : fiches clients, catalogue de
 devis → factures, suivi des paiements, tableau de bord et PDF.
 
 **Stack** : Cloudflare Pages + Pages Functions (TypeScript) + D1 (SQLite), frontend HTML/CSS/JS
-sans framework. PDF générés côté serveur avec `pdf-lib`.
+sans framework. PDF générés **dans le navigateur** avec `pdf-lib` (voir « PDF » plus bas).
 
 ## Démarrer en local
 
@@ -89,6 +89,18 @@ Le seed de démo refuse de s'exécuter en `--remote` et n'est pas dans `migratio
 - **Paiements** partiels ou complets ; le statut « Payée » est recalculé automatiquement ; trop-perçu refusé.
 - **RGPD** : un client sans document est supprimé ; un client avec devis/factures est
   **anonymisé** (données personnelles effacées, pièces comptables conservées).
+
+## PDF (devis et factures)
+
+- Gabarit dans `shared/pdf/render.ts`, fidèle au modèle de l'agence : logo `public/assets/pdf/logo.png`,
+  polices Archivo Black et Space Grotesk (licence OFL, fichiers dans `public/assets/pdf/`).
+- **Généré dans le navigateur**, pas sur le serveur : l'intégration des polices coûte ~450 ms de CPU,
+  au-delà des 10 ms par requête de l'offre gratuite Cloudflare Workers. Le serveur ne fournit que les
+  données (`GET /api/quotes/:id/pdf-data`, `/api/invoices/:id/pdf-data`).
+- `npm run build` produit le moteur `public/js/vendor/pdf.js` (≈ 1,3 Mo, chargé au premier PDF puis mis en cache) ;
+  ce fichier n'est pas versionné, Cloudflare Pages le reconstruit à chaque déploiement.
+- Remplacer le logo : même nom de fichier, PNG ≈ 1530 × 315 px sur fond `#FAF6EF`.
+- Conditions : une par ligne dans Paramètres, au format « Libellé : texte » (libellé en gras sur le PDF).
 
 ## Limites connues — à lire
 
