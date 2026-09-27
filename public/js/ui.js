@@ -58,6 +58,10 @@ export function toast(message, tone = 'ok') {
     host.setAttribute('aria-live', 'polite');
     document.body.append(host);
   }
+  // Même message déjà affiché (clics répétés) : on le relance au lieu d'empiler des doublons.
+  const existing = [...host.children].find((t) => !t.classList.contains('leaving') && t.querySelector('span')?.textContent === message);
+  if (existing) { existing.remove(); }
+  while (host.children.length >= 3) host.firstElementChild.remove();
   const el = document.createElement('div');
   el.className = `toast glass-solid ${tone}`;
   el.innerHTML = `${icon(tone === 'bad' ? 'circle-alert' : 'check')}<span></span>`;

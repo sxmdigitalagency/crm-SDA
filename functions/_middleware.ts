@@ -29,6 +29,10 @@ export const onRequest: Handler = async (context) => {
   } catch (err) {
     if (err instanceof HttpError) return error(err.status, err.message);
     console.error(err);
+    // Code déployé avant sa migration : le dire clairement plutôt qu'un « Erreur serveur » opaque.
+    if (/no such (column|table)/i.test(String((err as Error)?.message ?? err))) {
+      return error(500, 'Base de données pas à jour : une migration n\'a pas été appliquée (npx wrangler d1 migrations apply crm-sda --remote).');
+    }
     return error(500, 'Erreur serveur');
   }
 };
