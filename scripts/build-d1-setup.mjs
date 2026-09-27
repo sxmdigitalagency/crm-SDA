@@ -6,11 +6,25 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const files = readdirSync('migrations').filter((f) => /^\d{4}_.+\.sql$/.test(f)).sort();
 const q = (s) => `'${s.replace(/'/g, "''")}'`;
+// La console D1 du tableau de bord aplatit le texte collé sur UNE ligne : un seul commentaire `--`
+// y neutraliserait tout le reste. On retire donc tous les commentaires (hors chaînes SQL).
+function stripComments(sql) {
+  let out = '';
+  let inString = false;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (ch === "'") inString = !inString; // '' (apostrophe échappée) bascule deux fois : état inchangé
+    if (!inString && ch === '-' && sql[i + 1] === '-') {
+      while (i < sql.length && sql[i] !== '\n') i++;
+      out += '\n';
+      continue;
+    }
+    out += ch;
+  }
+  return out.split('\n').map((l) => l.trimEnd()).filter((l) => l.trim()).join('\n');
+}
+
 const out = [
-  '-- GÉNÉRÉ par scripts/build-d1-setup.mjs — ne pas modifier à la main.',
-  '-- À exécuter UNE SEULE FOIS sur une base D1 vide (console D1 du tableau de bord Cloudflare).',
-  '-- Ne contient aucune donnée de démonstration.',
-  '',
   `CREATE TABLE IF NOT EXISTS d1_migrations(
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
 		name       TEXT UNIQUE,
@@ -18,7 +32,7 @@ const out = [
 );`,
 ];
 for (const f of files) {
-  out.push('', `-- ── ${f} ${'─'.repeat(Math.max(0, 60 - f.length))}`, readFileSync(`migrations/${f}`, 'utf8').trim());
+  out.push(stripComments(readFileSync(`migrations/${f}`, 'utf8')));
   out.push(`INSERT INTO d1_migrations (name) VALUES (${q(f)});`);
 }
 writeFileSync('deploy/d1-setup.sql', out.join('\n') + '\n');
