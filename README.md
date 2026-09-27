@@ -63,7 +63,17 @@ Le seed de démo refuse de s'exécuter en `--remote` et n'est pas dans `migratio
 
 **Connexion** : 10 échecs depuis une même adresse IP bloquent les tentatives pendant 15 minutes.
 
-## Règles métier
+## Production
+
+- **Branche de production : `main`.** Chaque push sur `main` redéploie automatiquement le site.
+  Les évolutions arrivent par la branche de travail puis sont fusionnées dans `main`.
+- **Aperçus désactivés** (Paramètres → Builds → Contrôle des branches) : ils partageraient la base de production.
+- **Secrets** définis dans Cloudflare Pages (Production) : `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`.
+  Changer de mot de passe : régénérer le hash avec `scripts/hash-password.html`, remplacer le secret, redéployer.
+- **Nouvelle migration** : l'appliquer depuis un poste connecté à Cloudflare **avant** de pousser le code qui en dépend :
+  `npx wrangler d1 migrations apply crm-sda --remote`.
+
+
 
 - **Montants en centimes** (entiers) partout : aucune erreur d'arrondi flottant.
 - **Taxe par défaut : TGCA 4 %** (Saint-Martin). Taux propre possible par client (vide = défaut), modifiable
