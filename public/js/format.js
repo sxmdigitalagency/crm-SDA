@@ -1,15 +1,34 @@
-const eur = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
-const eur0 = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 const compact = new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 });
+const FORMATS = new Map();
+function fmt(currency, digits) {
+  const key = `${currency}:${digits}`;
+  if (!FORMATS.has(key)) {
+    FORMATS.set(key, new Intl.NumberFormat('fr-FR', { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits }));
+  }
+  return FORMATS.get(key);
+}
+export const CURRENCIES = ['EUR', 'USD'];
+export const SYMBOL = { EUR: '€', USD: '$US' };
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 const monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
 
 /** Montants stockés en centimes. */
 // Espace fine (U+202F) quasi invisible dans Geist aux grandes tailles : espace insécable standard.
 const nb = (s) => s.replace(/\u202f/g, '\u00a0');
-export const money = (cents) => nb(eur.format((cents ?? 0) / 100));
-export const money0 = (cents) => nb(eur0.format(Math.round((cents ?? 0) / 100)));
-export const moneyCompact = (cents) => `${nb(compact.format((cents ?? 0) / 100))}\u00a0€`;
+export const money = (cents, currency = 'EUR') => nb(fmt(currency, 2).format((cents ?? 0) / 100));
+export const money0 = (cents, currency = 'EUR') => nb(fmt(currency, 0).format(Math.round((cents ?? 0) / 100)));
+export const moneyCompact = (cents, currency = 'EUR') => `${nb(compact.format((cents ?? 0) / 100))}\u00a0${SYMBOL[currency] ?? currency}`;
+
+/** Montants par devise, jamais additionnés entre eux : « 1 200,00 € · 800,00 $US ». */
+export function moneyByCurrency(list, key = 'amount') {
+  const parts = (list ?? []).filter((x) => x[key]).map((x) => money(x[key], x.currency));
+  return parts.length ? parts.join(' · ') : money(0);
+}
+export function sumByCurrency(rows, pick) {
+  const acc = {};
+  for (const r of rows) acc[r.currency ?? 'EUR'] = (acc[r.currency ?? 'EUR'] ?? 0) + pick(r);
+  return Object.entries(acc).map(([currency, amount]) => ({ currency, amount }));
+}
 export const date = (iso) => (iso ? dateFmt.format(new Date(`${iso.slice(0, 10)}T12:00:00`)) : '—');
 export const month = (ym) => monthFmt.format(new Date(`${ym}-15T12:00:00`)).replace('.', '');
 export const pct = (x) => (x === null || x === undefined ? '—' : `${Math.round(x * 100)} %`);

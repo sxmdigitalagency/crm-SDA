@@ -34,21 +34,22 @@ const services = [
   ['Conseil', 'Heure de développement', 'Évolutions ponctuelles', 'heure', 6500],
 ];
 
+// [type, raison sociale, prénom, nom, ville, pays, devise] — entreprises fictives.
 const companies = [
-  ['pro', 'Boulangerie Delorme', 'Claire', 'Delorme', 'Lyon'],
-  ['pro', 'Atelier Nordik', 'Jonas', 'Berg', 'Lille'],
-  ['pro', 'Cabinet Morel Avocats', 'Sophie', 'Morel', 'Paris'],
-  ['pro', 'Garage des Pins', 'Karim', 'Benali', 'Toulouse'],
-  ['pro', 'Studio Yoga Lumen', 'Inès', 'Carvalho', 'Bordeaux'],
-  ['pro', 'Domaine Castel', 'Hugo', 'Castel', 'Montpellier'],
-  ['pro', 'Opti Vision', 'Marc', 'Lefebvre', 'Nantes'],
-  ['pro', 'Les Toits d’Azur', 'Léa', 'Rossi', 'Nice'],
-  ['particulier', '', 'Thomas', 'Girard', 'Rennes'],
-  ['pro', 'Kinetik Sport', 'Nadia', 'Haddad', 'Marseille'],
-  ['pro', 'Maison Arlette', 'Paul', 'Arlette', 'Strasbourg'],
-  ['particulier', '', 'Emma', 'Laurent', 'Grenoble'],
-  ['pro', 'Bureau Pixel', 'Yanis', 'Mercier', 'Paris'],
-  ['pro', 'Fleurs & Sens', 'Camille', 'Petit', 'Dijon'],
+  ['pro', 'Boulangerie du Port', 'Claire', 'Delorme', 'Marigot', 'Saint-Martin', 'EUR'],
+  ['pro', 'Blue Reef Diving', 'Jonas', 'Berg', 'Philipsburg', 'Sint Maarten', 'USD'],
+  ['pro', 'Cabinet Morel', 'Sophie', 'Morel', 'Marigot', 'Saint-Martin', 'EUR'],
+  ['pro', 'Garage des Terres Basses', 'Karim', 'Benali', 'Terres Basses', 'Saint-Martin', 'EUR'],
+  ['pro', 'Lumen Yoga Studio', 'Inès', 'Carvalho', 'Simpson Bay', 'Sint Maarten', 'USD'],
+  ['pro', 'Villa Castel Rentals', 'Hugo', 'Castel', 'Orient Bay', 'Saint-Martin', 'USD'],
+  ['pro', 'Opti Vision', 'Marc', 'Lefebvre', 'Grand-Case', 'Saint-Martin', 'EUR'],
+  ['pro', 'Sunset Rooftop Bar', 'Léa', 'Rossi', 'Maho', 'Sint Maarten', 'USD'],
+  ['particulier', '', 'Thomas', 'Girard', 'Concordia', 'Saint-Martin', 'EUR'],
+  ['pro', 'Kinetik Sport', 'Nadia', 'Haddad', 'Hope Estate', 'Saint-Martin', 'EUR'],
+  ['pro', 'Maison Arlette', 'Paul', 'Arlette', 'Marigot', 'Saint-Martin', 'EUR'],
+  ['particulier', '', 'Emma', 'Laurent', 'Cole Bay', 'Sint Maarten', 'USD'],
+  ['pro', 'Bureau Pixel', 'Yanis', 'Mercier', 'Marigot', 'Saint-Martin', 'EUR'],
+  ['pro', 'Fleurs & Sens', 'Camille', 'Petit', 'Grand-Case', 'Saint-Martin', 'EUR'],
 ];
 
 const sql = [
@@ -57,22 +58,22 @@ const sql = [
   'DELETE FROM payments; DELETE FROM line_items; DELETE FROM invoices; DELETE FROM quotes;',
   'DELETE FROM services; DELETE FROM clients; DELETE FROM counters; DELETE FROM sessions;',
   "DELETE FROM sqlite_sequence WHERE name IN ('payments','line_items','invoices','quotes','services','clients');",
-  `UPDATE settings SET company_name='SDA Digital Agency', company_address='12 rue de l’Exemple\n75000 Paris',
-     company_email='contact@sda.example', company_phone='06 00 00 00 00', company_website='sda.example',
-     siret='000 000 000 00000', iban='FR76 0000 0000 0000 0000 0000 000', tax_rate=20.0,
+  `UPDATE settings SET company_name='SXM Digital Agency', company_address='1 rue de l’Exemple\n97150 Marigot, Saint-Martin',
+     company_email='contact@sda.example', company_phone='0690 00 00 00', company_website='sda.example',
+     siret='000 000 000 00000', iban='FR76 0000 0000 0000 0000 0000 000', tax_label='TGCA', tax_rate=4.0, default_currency='EUR',
      quote_terms='Devis valable 30 jours. Acompte de 30 % à la signature, solde à la livraison.' WHERE id = 1;`,
 ];
 
 services.forEach(([cat, name, desc, unit, price], i) =>
   sql.push(`INSERT INTO services (id, category, name, description, unit, unit_price) VALUES (${i + 1}, ${q(cat)}, ${q(name)}, ${q(desc)}, ${q(unit)}, ${price});`));
 
-companies.forEach(([type, company, first, last, city], i) => {
+companies.forEach(([type, company, first, last, city, country, currency], i) => {
   const created = iso(daysAgo(between(20, 380)));
   const slug = (company || `${first}.${last}`).toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
-  sql.push(`INSERT INTO clients (id, type, status, company_name, first_name, last_name, email, phone, city, postal_code, created_at)
+  sql.push(`INSERT INTO clients (id, type, status, company_name, first_name, last_name, email, phone, city, country, currency, postal_code, created_at)
     VALUES (${i + 1}, ${q(type)}, ${q(i < 10 ? 'active' : 'prospect')}, ${q(company)}, ${q(first)}, ${q(last)},
     ${q(`contact@${slug}.example`)}, ${q(`06 ${between(10, 99)} ${between(10, 99)} ${between(10, 99)} ${between(10, 99)}`)},
-    ${q(city)}, ${q(String(between(10, 95)).padStart(2, '0') + '000')}, ${q(created + ' 10:00:00')});`);
+    ${q(city)}, ${q(country)}, ${q(currency)}, ${q(country === 'Saint-Martin' ? '97150' : '')}, ${q(created + ' 10:00:00')});`);
 });
 
 const counters = {};
@@ -102,7 +103,8 @@ for (const issued of docs) {
   const gross = lines.reduce((t, l) => t + l.amount, 0);
   const discount = rand() < 0.2 ? Math.round(gross * 0.1 / 100) * 100 : 0;
   const subtotal = gross - discount;
-  const tax = Math.round(subtotal * 0.2);
+  const currency = companies[clientId - 1][6];
+  const tax = Math.round(subtotal * 0.04);
   const total = subtotal + tax;
   const title = lines[0].name;
 
@@ -131,15 +133,15 @@ for (const issued of docs) {
       } else if (rand() < 0.4) pays.push([Math.round(total * 0.3), plus(invIssue, between(0, Math.max(0, Math.min(5, invAge))))]);
       pays.forEach(([a]) => (paid += a));
       const invStatus = paid >= total ? 'paid' : 'issued';
-      sql.push(`INSERT INTO invoices (id, number, client_id, quote_id, title, status, issue_date, due_date, tax_rate, discount, subtotal, tax_amount, total, amount_paid, created_at, updated_at)
-        VALUES (${invId}, ${q(number('invoice', 'FAC', invIssue))}, ${clientId}, ${qid}, ${q(title)}, ${q(invStatus)}, ${q(invIssue)}, ${q(due)}, 20.0, ${discount}, ${subtotal}, ${tax}, ${total}, ${paid}, ${q(invIssue + ' 09:30:00')}, ${q(invIssue + ' 09:30:00')});`);
+      sql.push(`INSERT INTO invoices (id, number, client_id, quote_id, title, status, issue_date, due_date, tax_rate, currency, discount, subtotal, tax_amount, total, amount_paid, created_at, updated_at)
+        VALUES (${invId}, ${q(number('invoice', 'FAC', invIssue))}, ${clientId}, ${qid}, ${q(title)}, ${q(invStatus)}, ${q(invIssue)}, ${q(due)}, 4.0, ${q(currency)}, ${discount}, ${subtotal}, ${tax}, ${total}, ${paid}, ${q(invIssue + ' 09:30:00')}, ${q(invIssue + ' 09:30:00')});`);
       lines.forEach((l, i) => sql.push(`INSERT INTO line_items (id, document_type, document_id, position, service_id, description, details, quantity, unit, unit_price, amount)
         VALUES (${lineId++}, 'invoice', ${invId}, ${i}, ${l.s}, ${q(l.name)}, ${q(l.desc)}, ${l.quantity}, ${q(l.unit)}, ${l.price}, ${l.amount});`));
       pays.forEach(([a, d]) => { if (d <= iso(today)) sql.push(`INSERT INTO payments (invoice_id, amount, paid_at, method, created_at) VALUES (${invId}, ${a}, ${q(d)}, ${q(pick(['virement', 'virement', 'carte', 'cheque']))}, ${q(d + ' 14:00:00')});`); });
     }
   }
-  sql.push(`INSERT INTO quotes (id, number, client_id, title, status, issue_date, valid_until, tax_rate, discount, subtotal, tax_amount, total, invoice_id, created_at, updated_at)
-    VALUES (${qid}, ${q(number('quote', 'DEV', issue))}, ${clientId}, ${q(title)}, ${q(invId ? 'converted' : status === 'converted' ? 'accepted' : status)}, ${q(issue)}, ${q(plus(issue, 30))}, 20.0, ${discount}, ${subtotal}, ${tax}, ${total}, ${invId ?? 'NULL'}, ${q(issue + ' 11:00:00')}, ${q(issue + ' 11:00:00')});`);
+  sql.push(`INSERT INTO quotes (id, number, client_id, title, status, issue_date, valid_until, tax_rate, currency, discount, subtotal, tax_amount, total, invoice_id, created_at, updated_at)
+    VALUES (${qid}, ${q(number('quote', 'DEV', issue))}, ${clientId}, ${q(title)}, ${q(invId ? 'converted' : status === 'converted' ? 'accepted' : status)}, ${q(issue)}, ${q(plus(issue, 30))}, 4.0, ${q(currency)}, ${discount}, ${subtotal}, ${tax}, ${total}, ${invId ?? 'NULL'}, ${q(issue + ' 11:00:00')}, ${q(issue + ' 11:00:00')});`);
   lines.forEach((l, i) => sql.push(`INSERT INTO line_items (id, document_type, document_id, position, service_id, description, details, quantity, unit, unit_price, amount)
     VALUES (${lineId++}, 'quote', ${qid}, ${i}, ${l.s}, ${q(l.name)}, ${q(l.desc)}, ${l.quantity}, ${q(l.unit)}, ${l.price}, ${l.amount});`));
 }

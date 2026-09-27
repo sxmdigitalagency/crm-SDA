@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { money } from '../format.js';
+import { moneyByCurrency } from '../format.js';
 import { bindRowLinks, clientStatus, debounce, errorState, html, ico, mount, skeletonRows } from '../ui.js';
 
 const FILTERS = [['', 'Tous'], ['active', 'Actifs'], ['prospect', 'Prospects'], ['inactive', 'Inactifs']];
@@ -48,8 +48,8 @@ export async function render(root, { query, navigate }) {
           <td class="hide-sm">${c.company_name ? [c.first_name, c.last_name].filter(Boolean).join(' ') : ''}<span class="sub">${c.email || c.phone || '—'}</span></td>
           <td>${clientStatus(c)}</td>
           <td class="r hide-sm">${c.quote_count}</td>
-          <td class="r">${money(c.invoiced)}</td>
-          <td class="r hide-sm">${money(c.paid)}</td>
+          <td class="r">${moneyByCurrency(c.totals, 'invoiced')}</td>
+          <td class="r hide-sm">${moneyByCurrency(c.totals, 'paid')}</td>
         </tr>`)}`);
     } catch (err) { mount(tbody, html`<tr><td colspan="6">${errorState(err)}</td></tr>`); }
   }

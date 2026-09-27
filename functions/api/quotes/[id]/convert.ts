@@ -15,8 +15,8 @@ export const onRequestPost: Handler = async ({ params, env }) => {
   const db = env.DB;
   await db.batch([
     db.prepare(
-      `INSERT INTO invoices (client_id, quote_id, title, tax_rate, discount, subtotal, tax_amount, total, notes)
-       SELECT client_id, id, title, tax_rate, discount, subtotal, tax_amount, total,
+      `INSERT INTO invoices (client_id, quote_id, title, tax_rate, currency, discount, subtotal, tax_amount, total, notes)
+       SELECT client_id, id, title, tax_rate, currency, discount, subtotal, tax_amount, total,
               CASE WHEN notes <> '' THEN notes ELSE 'Selon devis ' || number END
        FROM quotes WHERE id = ?1 AND status NOT IN ('converted', 'declined')`,
     ).bind(id),

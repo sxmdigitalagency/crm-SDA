@@ -1,11 +1,11 @@
 import { api } from '../api.js';
 import { barList, countUp, lineChart } from '../charts.js';
-import { money, money0, moneyCompact, month, pct, relativeDays, timeAgo } from '../format.js';
+import { money as moneyIn, money0 as money0In, moneyCompact as compactIn, month, pct, relativeDays, timeAgo } from '../format.js';
 import { errorState, html, ico, mount } from '../ui.js';
 
 const monthLong = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
 
-function delta(cur, prev) {
+function delta(cur, prev, money0) {
   if (!prev && !cur) return html`<span class="delta flat">Aucune activité sur la période précédente</span>`;
   if (!prev) return html`<span class="delta up">${ico('arrow-up-right', { size: 14 })}Nouveau vs même période</span>`;
   const r = (cur - prev) / prev;
@@ -28,17 +28,21 @@ function skeleton() {
     <div class="dash-grid"><section class="panel glass-panel"><div class="skeleton" style="height:300px"></div></section><section class="panel glass-panel"><div class="skeleton" style="height:300px"></div></section></div>`;
 }
 
-export async function render(root, { navigate }) {
+export async function render(root, { navigate, query }) {
   mount(root, skeleton());
   let data;
   try {
-    data = await api.get('/dashboard/stats');
+    data = await api.get(`/dashboard/stats${query.get('devise') ? `?currency=${encodeURIComponent(query.get('devise'))}` : ''}`);
   } catch (err) {
     mount(root, html`<header class="page-head"><div><h1>Tableau de bord</h1></div></header>${errorState(err, true)}`);
-    root.querySelector('[data-retry]')?.addEventListener('click', () => render(root, { navigate }));
+    root.querySelector('[data-retry]')?.addEventListener('click', () => render(root, { navigate, query }));
     return;
   }
   const k = data.kpis;
+  const cur = data.currency;
+  const money = (c) => moneyIn(c, cur);
+  const money0 = (c) => money0In(c, cur);
+  const moneyCompact = (c) => compactIn(c, cur);
   const periodLabel = monthLong.format(new Date(`${data.period.current_from}T12:00:00`));
   const day = Number(data.period.current_to.slice(8, 10));
   const hasHistory = data.monthly.some((m) => m.invoiced || m.collected);
@@ -48,9 +52,12 @@ export async function render(root, { navigate }) {
     <header class="page-head">
       <div>
         <h1>Tableau de bord</h1>
-        <p>${periodLabel[0].toUpperCase() + periodLabel.slice(1)} · du 1<sup>er</sup> au ${day}, comparé à la même période du mois précédent</p>
+        <p>${periodLabel[0].toUpperCase() + periodLabel.slice(1)} · du 1<sup>er</sup> au ${day}, comparé à la même période du mois précédent${data.currencies.length > 1 ? html` · montants en ${cur === 'EUR' ? 'euros' : 'dollars US'} uniquement` : ''}</p>
       </div>
       <div class="page-actions">
+        ${data.currencies.length > 1 ? html`<div class="segmented" role="group" aria-label="Devise affichée">
+          ${data.currencies.map((c) => html`<a href="/?devise=${c}" data-link class="seg-link" aria-current="${c === cur ? 'true' : false}">${c === 'EUR' ? '€ Euro' : '$ Dollar'}</a>`)}
+        </div>` : ''}
         <a class="btn" href="/factures/new" data-link>${ico('receipt')}Facture</a>
         <a class="btn primary" href="/devis/new" data-link>${ico('plus')}Nouveau devis</a>
       </div>
@@ -60,22 +67,22 @@ export async function render(root, { navigate }) {
       <div class="pulse-item lead">
         <span class="pulse-label">Facturé TTC</span>
         <span class="pulse-value num" data-count="${k.invoiced.cur}">${money0(k.invoiced.cur)}</span>
-        ${delta(k.invoiced.cur, k.invoiced.prev)}
+        ${delta(k.invoiced.cur, k.invoiced.prev, money0)}
       </div>
       <div class="pulse-item">
         <span class="pulse-label">Encaissé</span>
         <span class="pulse-value num" data-count="${k.collected.cur}">${money0(k.collected.cur)}</span>
-        ${delta(k.collected.cur, k.collected.prev)}
+        ${delta(k.collected.cur, k.collected.prev, money0)}
       </div>
       <div class="pulse-item">
         <span class="pulse-label">Devis émis HT</span>
         <span class="pulse-value num" data-count="${k.quoted.cur}">${money0(k.quoted.cur)}</span>
-        ${delta(k.quoted.cur, k.quoted.prev)}
+        ${delta(k.quoted.cur, k.quoted.prev, money0)}
       </div>
       <div class="pulse-item">
         <span class="pulse-label">Taux de transformation</span>
         <span class="pulse-value num">${pct(k.conversion.rate)}</span>
-        <span class="delta flat">${k.conversion.decided ? `${k.conversion.won} gagnés sur ${k.conversion.decided} · 12 mois` : 'Pas encore de devis décidé'}</span>
+        <span class="delta flat">${k.conversion.decided ? `${k.conversion.won} gagnés sur ${k.conversion.decided} · 12 mois${data.currencies.length > 1 ? ', toutes devises' : ''}` : 'Pas encore de devis décidé'}</span>
       </div>
     </section>
 
@@ -137,7 +144,7 @@ export async function render(root, { navigate }) {
               return html`<li><a href="${href}" data-link><span class="feed-icon ${a.kind}">${ico(ic, { size: 15 })}</span>
                 <span class="feed-text"><span class="feed-line"><strong>${label}</strong> · ${a.client_label}</span>
                   <small>${a.ref ? `${a.ref} · ` : ''}${timeAgo(a.at)}</small></span>
-                ${a.amount != null ? html`<span class="num feed-amount">${moneyCompact(a.amount)}</span>` : ''}</a></li>`;
+                ${a.amount != null ? html`<span class="num feed-amount">${compactIn(a.amount, a.currency)}</span>` : ''}</a></li>`;
             })}</ul>`
           : html`<p class="muted quiet">Aucune activité. Commencez par <a href="/clients/new" data-link>ajouter un client</a>.</p>`}
       </section>

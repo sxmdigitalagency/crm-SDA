@@ -1,3 +1,4 @@
+import { parseCurrency, parseTaxRate } from './documents';
 import { HttpError, oneOf, str } from './http';
 
 export const CLIENT_FIELDS = [
@@ -13,5 +14,8 @@ export function parseClient(body: Record<string, unknown>) {
   if (!data.company_name && !data.last_name) throw new HttpError(400, 'Nom ou raison sociale requis');
   if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) throw new HttpError(400, 'Email invalide');
   if (!data.country) data.country = 'France';
-  return { ...data, type, status };
+  const currency = parseCurrency(body.currency, 'EUR');
+  // Vide = taux par défaut des paramètres (NULL en base).
+  const tax_rate = body.tax_rate === '' || body.tax_rate == null ? null : parseTaxRate(body.tax_rate, 0);
+  return { ...data, type, status, currency, tax_rate };
 }

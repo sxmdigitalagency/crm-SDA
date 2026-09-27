@@ -1,4 +1,4 @@
-import { date, money } from '../format.js';
+import { date, money, moneyByCurrency, sumByCurrency } from '../format.js';
 import { html, invoiceStatus } from '../ui.js';
 import { renderList } from './doc-list.js';
 
@@ -13,12 +13,12 @@ export const render = (root, ctx) => renderList(root, ctx, {
     <td><span class="primary-cell">${i.client_label}</span><span class="sub">${i.title || 'Sans objet'}</span></td>
     <td class="ref hide-sm">${date(i.issue_date)}</td><td class="ref hide-sm">${date(i.due_date)}</td>
     <td>${invoiceStatus(i)}</td>
-    <td class="r hide-sm">${i.status === 'issued' ? money(i.total - i.amount_paid) : '—'}</td>
-    <td class="r">${money(i.total)}</td></tr>`,
+    <td class="r hide-sm">${i.status === 'issued' ? money(i.total - i.amount_paid, i.currency) : '—'}</td>
+    <td class="r">${money(i.total, i.currency)}</td></tr>`,
   footer: (rows) => {
     const live = rows.filter((i) => i.status === 'issued' || i.status === 'paid');
     return html`<span>${rows.length} facture${rows.length > 1 ? 's' : ''}</span>
-      <span>Reste dû <b class="num">${money(live.reduce((s, i) => s + i.total - i.amount_paid, 0))}</b></span>
-      <span>Total TTC émis <b class="num">${money(live.reduce((s, i) => s + i.total, 0))}</b></span>`;
+      <span>Reste dû <b class="num">${moneyByCurrency(sumByCurrency(live, (i) => i.total - i.amount_paid))}</b></span>
+      <span>Total TTC émis <b class="num">${moneyByCurrency(sumByCurrency(live, (i) => i.total))}</b></span>`;
   },
 });

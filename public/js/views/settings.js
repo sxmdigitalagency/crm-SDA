@@ -21,7 +21,7 @@ export async function render(root) {
           ${f('company_address', 'Adresse', { span: true, area: true, rows: 2 })}
           ${f('company_email', 'Email', { type: 'email' })}${f('company_phone', 'Téléphone')}
           ${f('company_website', 'Site web')}${f('siret', 'SIRET')}
-          ${f('vat_number', 'N° TVA intracommunautaire')}${f('iban', 'IBAN', { help: 'Affiché sur les factures pour le règlement par virement.' })}
+          ${f('vat_number', 'N° fiscal (si applicable)')}${f('iban', 'IBAN', { help: 'Affiché sur les factures pour le règlement par virement.' })}
         </div></div></section>
 
         <section class="panel glass-panel"><div class="form-section"><h3>Mentions sur les documents</h3><div class="form-grid">
@@ -33,7 +33,11 @@ export async function render(root) {
       <aside class="sticky-side">
         <section class="panel glass-panel"><div class="form-section"><h3>Taxe</h3><div class="form-grid">
           ${f('tax_label', 'Libellé')}${f('tax_rate', 'Taux (%)', { right: true, attrs: 'inputmode="decimal"' })}
-          ${f('tax_exempt_mention', 'Mention si taux à 0 %', { span: true, placeholder: 'TVA non applicable, art. 293 B du CGI', help: 'Le taux est figé sur chaque document à sa création : le modifier n’affecte pas les devis et factures existants.' })}
+          <label class="field span-2"><span>Devise par défaut</span><select class="input" name="default_currency">
+            <option value="EUR" ${s.default_currency === 'EUR' ? 'selected' : ''}>Euro (€)</option>
+            <option value="USD" ${s.default_currency === 'USD' ? 'selected' : ''}>Dollar US ($US)</option></select>
+            <small>Utilisée pour un client sans devise définie et par le tableau de bord.</small></label>
+          ${f('tax_exempt_mention', 'Mention si taux à 0 %', { span: true, placeholder: 'Ex. motif d\u2019exonération à faire valider…', help: 'Le taux est figé sur chaque document à sa création : le modifier n’affecte pas les devis et factures existants.' })}
         </div></div></section>
         <section class="panel glass-panel"><div class="form-section"><h3>Numérotation et délais</h3><div class="form-grid">
           ${f('quote_prefix', 'Préfixe devis', { help: 'DEV-2026-0001' })}${f('invoice_prefix', 'Préfixe factures', { help: 'FAC-2026-0001' })}

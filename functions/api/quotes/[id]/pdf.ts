@@ -13,7 +13,7 @@ export const onRequestGet: Handler = async ({ params, request, env }) => {
     getSettings(env.DB),
   ]);
   const bytes = await renderPdf({
-    kind: 'quote', number: q.number, title: q.title, issue_date: q.issue_date, second_date: q.valid_until,
+    kind: 'quote', currency: q.currency, number: q.number, title: q.title, issue_date: q.issue_date, second_date: q.valid_until,
     tax_rate: q.tax_rate, discount: q.discount, subtotal: q.subtotal, tax_amount: q.tax_amount, total: q.total,
     amount_paid: 0, notes: q.notes, status: q.status, client: client ?? {}, lines: lines.results,
   }, settings);

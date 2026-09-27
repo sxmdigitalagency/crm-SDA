@@ -15,7 +15,7 @@ export const onRequestGet: Handler = async ({ params, request, env }) => {
   // Un brouillon n'a pas encore de numéro légal : le PDF est marqué comme tel.
   const number = inv.number ?? 'BROUILLON';
   const bytes = await renderPdf({
-    kind: 'invoice', number, title: inv.title, issue_date: inv.issue_date, second_date: inv.due_date,
+    kind: 'invoice', currency: inv.currency, number, title: inv.title, issue_date: inv.issue_date, second_date: inv.due_date,
     tax_rate: inv.tax_rate, discount: inv.discount, subtotal: inv.subtotal, tax_amount: inv.tax_amount, total: inv.total,
     amount_paid: inv.amount_paid, notes: inv.notes, status: inv.status, client: client ?? {}, lines: lines.results,
   }, settings);

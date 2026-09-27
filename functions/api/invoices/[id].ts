@@ -1,4 +1,4 @@
-import { CLIENT_LABEL_SQL, computeTotals, getLines, getSettings, lineStatements, normalizeLines } from '../../lib/documents';
+import { CLIENT_LABEL_SQL, computeTotals, getLines, getSettings, lineStatements, normalizeLines, parseCurrency, parseTaxRate, type Currency } from '../../lib/documents';
 import { addDays, error, HttpError, isoDate, json, readJson, str, today, toId } from '../../lib/http';
 import type { Handler } from '../../lib/types';
 
@@ -30,8 +30,8 @@ export const onRequestGet: Handler = async ({ params, env }) => {
 export const onRequestPut: Handler = async ({ params, request, env }) => {
   const id = toId(params.id);
   const db = env.DB;
-  const inv = await db.prepare('SELECT status, tax_rate, amount_paid FROM invoices WHERE id = ?').bind(id)
-    .first<{ status: string; tax_rate: number; amount_paid: number }>();
+  const inv = await db.prepare('SELECT status, tax_rate, currency, amount_paid FROM invoices WHERE id = ?').bind(id)
+    .first<{ status: string; tax_rate: number; currency: Currency; amount_paid: number }>();
   if (!inv) return error(404, 'Facture introuvable');
   const body = await readJson(request);
 
@@ -68,12 +68,14 @@ export const onRequestPut: Handler = async ({ params, request, env }) => {
   if (inv.status !== 'draft') throw new HttpError(409, 'Facture émise : contenu figé');
   const lines = normalizeLines(body.lines);
   const discount = Math.max(0, Math.round(Number(body.discount) || 0));
-  const totals = computeTotals(lines, inv.tax_rate, discount);
+  const taxRate = parseTaxRate(body.tax_rate, inv.tax_rate);
+  const currency = parseCurrency(body.currency, inv.currency);
+  const totals = computeTotals(lines, taxRate, discount);
   await db.batch([
     db.prepare(
-      `UPDATE invoices SET client_id=?, title=?, discount=?, subtotal=?, tax_amount=?, total=?, notes=?, updated_at=datetime('now')
+      `UPDATE invoices SET client_id=?, title=?, tax_rate=?, currency=?, discount=?, subtotal=?, tax_amount=?, total=?, notes=?, updated_at=datetime('now')
        WHERE id=? AND status='draft'`,
-    ).bind(toId(body.client_id), str(body.title, 200), discount, totals.subtotal, totals.tax_amount, totals.total, str(body.notes, 5000), id),
+    ).bind(toId(body.client_id), str(body.title, 200), taxRate, currency, discount, totals.subtotal, totals.tax_amount, totals.total, str(body.notes, 5000), id),
     ...lineStatements(db, 'invoice', id, lines),
   ]);
   return json(await loadInvoice(db, id));

@@ -42,7 +42,11 @@ Le seed de démo refuse de s'exécuter en `--remote` et n'est pas dans `migratio
 ## Règles métier
 
 - **Montants en centimes** (entiers) partout : aucune erreur d'arrondi flottant.
-- **Taux de taxe figé** sur chaque document à sa création ; le changer dans Paramètres n'altère pas l'existant.
+- **Taxe par défaut : TGCA 4 %** (Saint-Martin). Taux propre possible par client (vide = défaut), modifiable
+  sur chaque document tant qu'il est en brouillon, puis **figé** : changer Paramètres n'altère pas l'existant.
+- **Deux devises, EUR et USD**, choisies par client et héritées par ses devis/factures. Les montants de devises
+  différentes ne sont **jamais additionnés** : totaux séparés dans les listes, tableau de bord filtré par devise
+  (pas de conversion, faute de taux de change fiable).
 - **Devis** : numéroté à la création (`DEV-2026-0001`), statuts brouillon → envoyé → accepté/refusé → facturé.
 - **Factures** : un brouillon n'a pas de numéro. Le numéro (`FAC-2026-0001`) est attribué à
   l'**émission**, dans la même transaction que le compteur : numérotation continue, sans trou.
@@ -54,18 +58,20 @@ Le seed de démo refuse de s'exécuter en `--remote` et n'est pas dans `migratio
 
 ## Limites connues — à lire
 
-1. **Facturation électronique obligatoire.** Selon impots.gouv.fr et economie.gouv.fr, toutes les
-   entreprises doivent pouvoir **recevoir** des factures électroniques depuis le 1er septembre 2026,
-   et les PME / micro-entreprises devront les **émettre** au format électronique via une plateforme
-   agréée à partir du **1er septembre 2027**. Un PDF envoyé par email ne suffira plus pour les factures
-   entre entreprises assujetties en France. Cet outil ne transmet pas encore via une plateforme agréée :
-   à prévoir avant septembre 2027 (export Factur-X ou intégration d'une plateforme agréée).
-   Sources : [impots.gouv.fr — calendrier](https://www.impots.gouv.fr/professionnel/questions/partir-de-quand-suis-je-concerne-par-la-reforme-de-la-facturation),
-   [economie.gouv.fr — tout savoir](https://www.economie.gouv.fr/tout-savoir-sur-la-facturation-electronique-pour-les-entreprises).
+1. **Facturation électronique (réforme française).** Les entreprises établies à Saint-Martin sont hors du champ
+   de la réforme, la TVA n'y étant pas applicable ; un e-reporting reste possible pour des opérations situées en
+   France et soumises à la TVA. Rien n'est donc implémenté (pas d'export Factur-X). À réévaluer si SDA facture un
+   jour des entreprises de métropole ou des DROM.
+   Sources : [impots.gouv.fr — FAQ DROM/COM](https://www.impots.gouv.fr/sites/default/files/media/1_metier/2_professionnel/EV/2_gestion/290_facturation_electronique/faq_drom.pdf),
+   [fiche DOM-COM](https://www.impots.gouv.fr/sites/default/files/media/1_metier/2_professionnel/EV/2_gestion/290_facturation_electronique/fiches_reforme/fiche-domcom.pdf).
+   Obligations éventuelles à Sint-Maarten : non vérifiées.
 2. **Pas d'avoirs** : annuler une facture déjà envoyée devrait s'accompagner d'un avoir (non géré).
 3. **Pas d'envoi d'email intégré** : le bouton prépare un email ; le PDF est à joindre à la main.
-4. **Mentions légales** : les textes par défaut (pénalités de retard, indemnité de 40 €) sont un point
-   de départ, à faire valider par un expert-comptable.
+4. **Mentions légales** : les textes par défaut (pénalités de retard, indemnité de 40 €) viennent du droit
+   commercial français ; leur application à Saint-Martin, et a fortiori à des clients de Sint-Maarten facturés
+   en USD, est à faire valider par un expert-comptable.
+5. **TGCA hors de Saint-Martin** : l'application de la TGCA aux prestations facturées à des clients de
+   Sint-Maarten n'est pas tranchée dans l'outil — le taux se règle par client.
 
 ## Design
 

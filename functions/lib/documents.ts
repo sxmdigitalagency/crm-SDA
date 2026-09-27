@@ -2,6 +2,35 @@ import { HttpError, str } from './http';
 
 export type DocType = 'quote' | 'invoice';
 
+export const CURRENCIES = ['EUR', 'USD'] as const;
+export type Currency = (typeof CURRENCIES)[number];
+
+export function parseCurrency(value: unknown, fallback: Currency): Currency {
+  return CURRENCIES.includes(value as Currency) ? (value as Currency) : fallback;
+}
+
+/** Taux en % ; `undefined`/'' → fallback. Refuse les valeurs hors 0–100. */
+export function parseTaxRate(value: unknown, fallback: number): number {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number(String(value).replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0 || n > 100) throw new HttpError(400, 'Taux de taxe invalide (0 à 100 %)');
+  return Math.round(n * 1000) / 1000;
+}
+
+/** Devise et taux applicables à un nouveau document : saisie > fiche client > paramètres. */
+export async function documentDefaults(db: D1Database, clientId: number, body: Record<string, unknown>) {
+  const client = await db.prepare('SELECT anonymized_at, currency, tax_rate FROM clients WHERE id = ?').bind(clientId)
+    .first<{ anonymized_at: string | null; currency: Currency; tax_rate: number | null }>();
+  if (!client) throw new HttpError(400, 'Client introuvable');
+  if (client.anonymized_at) throw new HttpError(409, 'Client anonymisé');
+  const settings = await getSettings(db);
+  return {
+    settings,
+    currency: parseCurrency(body.currency, client.currency ?? settings.default_currency),
+    tax_rate: parseTaxRate(body.tax_rate, client.tax_rate ?? settings.tax_rate),
+  };
+}
+
 export interface LineInput {
   service_id?: number | null;
   description?: string;
@@ -109,6 +138,7 @@ export interface Settings {
   iban: string;
   tax_label: string;
   tax_rate: number;
+  default_currency: Currency;
   tax_exempt_mention: string;
   quote_prefix: string;
   invoice_prefix: string;

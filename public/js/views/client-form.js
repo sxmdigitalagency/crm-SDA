@@ -2,18 +2,19 @@ import { api } from '../api.js';
 import { busy, clientName, errorState, html, ico, mount, raw, toast, toastError } from '../ui.js';
 
 const FIELDS = {
-  company: [['company_name', 'Raison sociale', 'span-2'], ['siret', 'SIRET'], ['vat_number', 'N° TVA intracommunautaire']],
+  company: [['company_name', 'Raison sociale', 'span-2'], ['siret', 'N° d’immatriculation (SIRET, KvK…)'], ['vat_number', 'N° fiscal (CRIB, TVA…)']],
   contact: [['first_name', 'Prénom'], ['last_name', 'Nom'], ['email', 'Email', '', 'email'], ['phone', 'Téléphone', '', 'tel']],
   address: [['address', 'Adresse', 'span-2'], ['postal_code', 'Code postal'], ['city', 'Ville'], ['country', 'Pays']],
 };
 
 export async function render(root, { match, navigate }) {
   const id = match[1] === 'new' ? null : Number(match[1].split('/')[0]);
-  let c = { type: 'pro', status: 'prospect', country: 'France' };
-  if (id) {
-    try { c = await api.get(`/clients/${id}`); }
-    catch (err) { mount(root, errorState(err)); return; }
-  }
+  let c, settings;
+  try {
+    [settings, c] = await Promise.all([api.get('/settings'), id ? api.get(`/clients/${id}`) : null]);
+  } catch (err) { mount(root, errorState(err)); return; }
+  c ??= { type: 'pro', status: 'prospect', country: 'Saint-Martin', currency: settings.default_currency, tax_rate: null };
+  const rateLabel = `${settings.tax_label} ${String(settings.tax_rate).replace('.', ',')} %`;
 
   const input = ([name, label, cls = '', type = 'text']) => html`
     <label class="field ${cls}"><span>${label}</span><input class="input" name="${name}" type="${type}" value="${c[name] ?? ''}" autocomplete="off" ${type === 'email' || name === 'siret' || name === 'vat_number' ? raw('spellcheck="false"') : ''}></label>`;
@@ -34,6 +35,15 @@ export async function render(root, { match, navigate }) {
           </select></label>
         </div>
       </div>
+      <div class="form-section"><h3>Facturation</h3><div class="form-grid">
+        <label class="field"><span>Devise</span><select class="input" name="currency">
+          <option value="EUR" ${c.currency === 'EUR' ? 'selected' : ''}>Euro (€)</option>
+          <option value="USD" ${c.currency === 'USD' ? 'selected' : ''}>Dollar US ($US)</option>
+        </select><small>Proposée par défaut sur ses devis et factures.</small></label>
+        <label class="field"><span>Taux de taxe (%)</span>
+          <input class="input right" name="tax_rate" inputmode="decimal" value="${c.tax_rate == null ? '' : String(c.tax_rate).replace('.', ',')}" placeholder="${`Par défaut : ${rateLabel}…`}" autocomplete="off">
+          <small>Laissez vide pour appliquer le taux par défaut. Pour un client hors de Saint-Martin, faites valider le taux par votre comptable.</small></label>
+      </div></div>
       <div class="form-section" data-company ${c.type === 'particulier' ? 'hidden' : ''}><h3>Entreprise</h3><div class="form-grid">${FIELDS.company.map(input)}</div></div>
       <div class="form-section"><h3>Contact</h3><div class="form-grid">${FIELDS.contact.map(input)}</div></div>
       <div class="form-section"><h3>Adresse de facturation</h3><div class="form-grid">${FIELDS.address.map(input)}</div></div>
@@ -61,6 +71,7 @@ export async function render(root, { match, navigate }) {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(form));
     data.type = type;
+    data.tax_rate = data.tax_rate.trim() === '' ? '' : data.tax_rate.replace(',', '.');
     if (type === 'particulier') { data.company_name = ''; data.siret = ''; data.vat_number = ''; }
     const err = form.querySelector('.form-error');
     err.textContent = '';

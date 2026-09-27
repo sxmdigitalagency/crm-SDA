@@ -12,6 +12,7 @@ export interface PdfLine {
 
 export interface PdfDocumentData {
   kind: 'quote' | 'invoice';
+  currency: 'EUR' | 'USD';
   number: string;
   title: string;
   issue_date: string | null;
@@ -50,8 +51,6 @@ function clean(text: string): string {
     .replace(/[^\x0A\x20-\x7E¡-ÿ€ŒœŠšŸŽž]/g, '');
 }
 
-const money = (cents: number) =>
-  clean(new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(cents / 100));
 const qty = (n: number) => clean(new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3 }).format(n));
 const date = (iso: string | null) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '-');
 
@@ -73,6 +72,8 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
 }
 
 export async function renderPdf(doc: PdfDocumentData, s: Settings): Promise<Uint8Array> {
+  const fmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: doc.currency });
+  const money = (cents: number) => clean(fmt.format(cents / 100));
   const pdf = await PDFDocument.create();
   const title = `${doc.kind === 'quote' ? 'Devis' : 'Facture'} ${doc.number}`;
   pdf.setTitle(title);
@@ -118,8 +119,8 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings): Promise<Uint
     c.address,
     [c.postal_code, c.city].filter(Boolean).join(' '),
     c.country && c.country !== 'France' ? c.country : '',
-    c.siret ? `SIRET ${c.siret}` : '',
-    c.vat_number ? `TVA ${c.vat_number}` : '',
+    c.siret ? `Immatriculation ${c.siret}` : '',
+    c.vat_number ? `N° fiscal ${c.vat_number}` : '',
   ].flatMap((v) => (v ? v.split('\n') : []));
   const boxW = 240;
   const boxH = 26 + clientLines.length * 12;
@@ -247,7 +248,7 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings): Promise<Uint
 
   // ── Pied de page sur chaque page ──────────────────────────
   const pages = pdf.getPages();
-  const legal = [s.company_name, s.siret ? `SIRET ${s.siret}` : '', s.vat_number ? `TVA ${s.vat_number}` : ''].filter(Boolean).join('  ·  ');
+  const legal = [s.company_name, s.siret ? `SIRET ${s.siret}` : '', s.vat_number ? `N° fiscal ${s.vat_number}` : ''].filter(Boolean).join('  ·  ');
   pages.forEach((p, i) => {
     page = p;
     page.drawLine({ start: { x: M, y: M - 6 }, end: { x: right, y: M - 6 }, thickness: 0.5, color: RULE });

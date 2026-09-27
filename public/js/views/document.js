@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { date, money, moneyInput, parseMoney, parseQty, qty, today } from '../format.js';
+import { date, money, moneyInput, parseMoney, parseQty, qty, SYMBOL, today } from '../format.js';
 import { busy, confirmDialog, errorState, html, ico, invoiceStatus, mount, quoteStatus, toast, toastError } from '../ui.js';
 
 const UNITS = ['forfait', 'heure', 'jour', 'mois', 'unité'];
@@ -22,8 +22,12 @@ export async function render(root, { match, query, navigate }) {
   } catch (err) { mount(root, errorState(err)); return; }
 
   const presetClient = Number(query.get('client')) || null;
+  const clientDefaults = (cid) => {
+    const c = clients.find((x) => x.id === Number(cid));
+    return { currency: c?.currency ?? settings.default_currency, tax_rate: c?.tax_rate ?? settings.tax_rate };
+  };
   const d = doc ?? {
-    client_id: presetClient ?? '', title: '', notes: '', discount: 0, status: 'draft', tax_rate: settings.tax_rate,
+    client_id: presetClient ?? '', title: '', notes: '', discount: 0, status: 'draft', ...clientDefaults(presetClient),
     issue_date: today(), valid_until: addDays(today(), settings.quote_validity_days), lines: [],
     amount_paid: 0, payments: [],
   };
@@ -31,6 +35,9 @@ export async function render(root, { match, query, navigate }) {
   const lines = (d.lines ?? []).map((l) => ({ ...l }));
   if (!lines.length) lines.push(blankLine());
   const editable = isQuote ? d.status !== 'converted' : d.status === 'draft';
+  const m = (cents) => money(cents, d.currency);
+  // Devise et taux suivent le client choisi tant que l'utilisateur ne les a pas modifiés à la main.
+  const touched = { currency: Boolean(doc), tax_rate: Boolean(doc) };
   let dirty = false;
 
   function blankLine() { return { service_id: null, description: '', details: '', quantity: 1, unit: 'forfait', unit_price: 0 }; }
@@ -58,8 +65,8 @@ export async function render(root, { match, query, navigate }) {
       </div>
       <input class="input right line-qty" data-f="quantity" inputmode="decimal" value="${qty(l.quantity)}" aria-label="Quantité" ${editable ? '' : 'readonly'}>
       <select class="input line-unit" data-f="unit" aria-label="Unité" ${editable ? '' : 'disabled'}>${UNITS.map((u) => html`<option ${u === l.unit ? 'selected' : ''}>${u}</option>`)}</select>
-      <input class="input right line-price" data-f="unit_price" inputmode="decimal" value="${moneyInput(l.unit_price)}" aria-label="Prix unitaire HT" ${editable ? '' : 'readonly'}>
-      <span class="line-amount num" data-amount>${money(lineAmount(l))}</span>
+      <input class="input right line-price" data-f="unit_price" inputmode="decimal" value="${moneyInput(l.unit_price)}" aria-label="Prix unitaire HT en ${SYMBOL[d.currency]}" ${editable ? '' : 'readonly'}>
+      <span class="line-amount num" data-amount>${m(lineAmount(l))}</span>
       ${editable ? html`<button type="button" class="btn ghost sm icon-only" data-remove aria-label="Supprimer la ligne ${i + 1}">${ico('x', { size: 16 })}</button>` : html`<span></span>`}
     </div>`;
 
@@ -105,6 +112,13 @@ export async function render(root, { match, query, navigate }) {
               ${activeClients.length ? '' : html`<small>Aucun client : <a href="/clients/new" data-link>créez-en un d'abord</a>.</small>`}
             </label>
             <label class="field span-2"><span>Objet</span><input class="input" name="title" value="${d.title}" placeholder="${isQuote ? 'Ex. Refonte du site vitrine…' : 'Ex. Développement du site vitrine…'}" ${editable ? '' : 'readonly'}></label>
+            ${editable ? html`
+              <label class="field"><span>Devise</span><select class="input" name="currency">
+                ${['EUR', 'USD'].map((c) => html`<option value="${c}" ${d.currency === c ? 'selected' : ''}>${c === 'EUR' ? 'Euro (€)' : 'Dollar US ($US)'}</option>`)}
+              </select></label>
+              <label class="field"><span>${settings.tax_label} (%)</span><input class="input right" name="tax_rate" inputmode="decimal" value="${qty(d.tax_rate)}" autocomplete="off"></label>`
+            : html`<label class="field"><span>Devise</span><input class="input" value="${d.currency === 'EUR' ? 'Euro (€)' : 'Dollar US ($US)'}" readonly></label>
+              <label class="field"><span>${settings.tax_label}</span><input class="input" value="${qty(d.tax_rate)} %" readonly></label>`}
             ${isQuote ? html`
               <label class="field"><span>Date du devis</span><input class="input" type="date" name="issue_date" value="${d.issue_date}" ${editable ? '' : 'readonly'}></label>
               <label class="field"><span>Valable jusqu'au</span><input class="input" type="date" name="valid_until" value="${d.valid_until}" ${editable ? '' : 'readonly'}></label>`
@@ -122,7 +136,7 @@ export async function render(root, { match, query, navigate }) {
             <button type="button" class="btn sm" data-add>${ico('plus', { size: 15 })}Ligne libre</button>
             ${services.length ? html`<label class="catalog-pick">${ico('package', { size: 15 })}<span class="visually-hidden">Ajouter depuis le catalogue</span>
               <select class="input" data-catalog><option value="">Ajouter depuis le catalogue…</option>
-                ${Object.entries(byCategory).map(([cat, list]) => html`<optgroup label="${cat}">${list.map((s) => html`<option value="${s.id}">${s.name} — ${money(s.unit_price)} / ${s.unit}</option>`)}</optgroup>`)}
+                ${Object.entries(byCategory).map(([cat, list]) => html`<optgroup label="${cat}">${list.map((s) => html`<option value="${s.id}">${s.name} — ${moneyInput(s.unit_price)} / ${s.unit}</option>`)}</optgroup>`)}
               </select></label>` : html`<a class="muted small-link" href="/prestations" data-link>Créer un catalogue de prestations</a>`}
           </div>` : ''}
         </section>
@@ -160,15 +174,15 @@ export async function render(root, { match, query, navigate }) {
     const t = totals();
     const discountField = editable
       ? html`<input class="input right discount" id="discount" inputmode="decimal" value="${moneyInput(d.discount || 0)}" aria-label="Remise HT">`
-      : html`<span class="num">- ${money(t.discount)}</span>`;
+      : html`<span class="num">- ${m(t.discount)}</span>`;
     mount(totalsEl, html`
-      <div><dt>Total HT brut</dt><dd class="num">${money(t.gross)}</dd></div>
+      <div><dt>Total HT brut</dt><dd class="num">${m(t.gross)}</dd></div>
       ${editable || t.discount ? html`<div class="discount-row"><dt>Remise HT</dt><dd>${discountField}</dd></div>` : ''}
-      <div><dt>Total HT</dt><dd class="num">${money(t.subtotal)}</dd></div>
-      <div><dt>${settings.tax_label} ${qty(d.tax_rate)} %</dt><dd class="num">${money(t.tax)}</dd></div>
-      <div class="grand"><dt>${d.tax_rate ? 'Total TTC' : 'Total'}</dt><dd class="num">${money(t.total)}</dd></div>
-      ${!isQuote && d.status !== 'draft' ? html`<div><dt>Déjà réglé</dt><dd class="num">${money(d.amount_paid)}</dd></div>
-        <div class="grand due"><dt>Reste à payer</dt><dd class="num">${money(d.total - d.amount_paid)}</dd></div>` : ''}
+      <div><dt>Total HT</dt><dd class="num">${m(t.subtotal)}</dd></div>
+      <div><dt>${settings.tax_label} ${qty(d.tax_rate)} %</dt><dd class="num">${m(t.tax)}</dd></div>
+      <div class="grand"><dt>${d.tax_rate ? 'Total TTC' : 'Total'}</dt><dd class="num">${m(t.total)}</dd></div>
+      ${!isQuote && d.status !== 'draft' ? html`<div><dt>Déjà réglé</dt><dd class="num">${m(d.amount_paid)}</dd></div>
+        <div class="grand due"><dt>Reste à payer</dt><dd class="num">${m(d.total - d.amount_paid)}</dd></div>` : ''}
     `);
     totalsEl.querySelector('#discount')?.addEventListener('change', (e) => { d.discount = Math.max(0, parseMoney(e.target.value)); markDirty(); paintTotals(); });
   }
@@ -191,7 +205,7 @@ export async function render(root, { match, query, navigate }) {
       else if (f === 'unit_price') l.unit_price = parseMoney(e.target.value);
       else l[f] = e.target.value;
       if (f === 'details') autoGrow();
-      row.querySelector('[data-amount]').textContent = money(lineAmount(l));
+      row.querySelector('[data-amount]').textContent = m(lineAmount(l));
       markDirty();
       paintTotals();
     });
@@ -221,6 +235,24 @@ export async function render(root, { match, query, navigate }) {
       repaintLines(); markDirty(); paintTotals();
     });
     form.addEventListener('input', (e) => { if (!e.target.closest('#lines')) markDirty(); });
+    const applyMoneyFields = () => {
+      linesEl.querySelectorAll('.line').forEach((row) => { row.querySelector('[data-amount]').textContent = m(lineAmount(lines[Number(row.dataset.i)])); });
+      paintTotals();
+    };
+    form.currency.addEventListener('change', (e) => { touched.currency = true; d.currency = e.target.value; applyMoneyFields(); });
+    form.tax_rate.addEventListener('change', (e) => {
+      touched.tax_rate = true;
+      const v = parseQty(e.target.value);
+      d.tax_rate = v >= 0 && v <= 100 ? v : d.tax_rate;
+      e.target.value = qty(d.tax_rate);
+      paintTotals();
+    });
+    form.client_id.addEventListener('change', (e) => {
+      const def = clientDefaults(e.target.value);
+      if (!touched.currency) { d.currency = def.currency; form.currency.value = def.currency; }
+      if (!touched.tax_rate) { d.tax_rate = def.tax_rate; form.tax_rate.value = qty(def.tax_rate); }
+      applyMoneyFields();
+    });
   }
 
   const payload = () => {
@@ -229,6 +261,7 @@ export async function render(root, { match, query, navigate }) {
       client_id: Number(fd.get('client_id')), title: fd.get('title'), notes: fd.get('notes'),
       issue_date: fd.get('issue_date') || undefined, valid_until: fd.get('valid_until') || undefined,
       discount: d.discount || 0,
+      currency: d.currency, tax_rate: d.tax_rate,
       lines: lines.filter((l) => l.description.trim()).map((l) => ({ ...l, quantity: parseQty(l.quantity) })),
     };
   };
@@ -282,7 +315,7 @@ export async function render(root, { match, query, navigate }) {
     } else if (b.matches('[data-mail]')) {
       const client = clients.find((c) => c.id === Number(d.client_id));
       const subject = `${isQuote ? 'Devis' : 'Facture'} ${d.number ?? ''} — ${settings.company_name}`;
-      const body = `Bonjour,\n\nVous trouverez ci-joint ${isQuote ? 'notre devis' : 'notre facture'} ${d.number ?? ''} d'un montant de ${money(d.total)}${d.title ? ` (${d.title})` : ''}.\n\nBien cordialement,\n${settings.company_name}`;
+      const body = `Bonjour,\n\nVous trouverez ci-joint ${isQuote ? 'notre devis' : 'notre facture'} ${d.number ?? ''} d'un montant de ${m(d.total)}${d.title ? ` (${d.title})` : ''}.\n\nBien cordialement,\n${settings.company_name}`;
       location.href = `mailto:${client?.email ?? ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       toast('Pensez à joindre le PDF téléchargé à votre email.');
     }
@@ -307,7 +340,7 @@ export async function render(root, { match, query, navigate }) {
       <div class="panel-head"><h2>Paiements</h2><span class="muted">${d.payments.length}</span></div>
       ${d.payments.length ? html`<ul class="payments">${d.payments.map((p) => html`
         <li><span class="feed-icon payment">${ico('banknote', { size: 15 })}</span>
-          <span><strong class="num">${money(p.amount)}</strong><small>${date(p.paid_at)} · ${METHODS.find((m) => m[0] === p.method)?.[1] ?? p.method}${p.reference ? ` · ${p.reference}` : ''}</small></span>
+          <span><strong class="num">${m(p.amount)}</strong><small>${date(p.paid_at)} · ${METHODS.find((m) => m[0] === p.method)?.[1] ?? p.method}${p.reference ? ` · ${p.reference}` : ''}</small></span>
           ${d.status !== 'cancelled' ? html`<button class="btn ghost sm icon-only" data-del-pay="${p.id}" aria-label="Supprimer ce paiement">${ico('trash-2', { size: 15 })}</button>` : ''}</li>`)}</ul>`
         : html`<p class="muted quiet">Aucun paiement enregistré.</p>`}
       ${d.status === 'issued' ? html`

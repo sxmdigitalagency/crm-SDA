@@ -7,8 +7,8 @@ export const onRequestGet: Handler = async ({ params, env }) => {
   const client = await env.DB.prepare('SELECT * FROM clients WHERE id = ?').bind(id).first();
   if (!client) return error(404, 'Client introuvable');
   const [quotes, invoices] = await Promise.all([
-    env.DB.prepare('SELECT id, number, title, status, issue_date, valid_until, total FROM quotes WHERE client_id = ? ORDER BY issue_date DESC, id DESC').bind(id).all(),
-    env.DB.prepare('SELECT id, number, title, status, issue_date, due_date, total, amount_paid FROM invoices WHERE client_id = ? ORDER BY COALESCE(issue_date, created_at) DESC, id DESC').bind(id).all(),
+    env.DB.prepare('SELECT id, number, title, status, issue_date, valid_until, total, currency FROM quotes WHERE client_id = ? ORDER BY issue_date DESC, id DESC').bind(id).all(),
+    env.DB.prepare('SELECT id, number, title, status, issue_date, due_date, total, amount_paid, currency FROM invoices WHERE client_id = ? ORDER BY COALESCE(issue_date, created_at) DESC, id DESC').bind(id).all(),
   ]);
   return json({ ...client, quotes: quotes.results, invoices: invoices.results });
 };
@@ -19,7 +19,7 @@ export const onRequestPut: Handler = async ({ params, request, env }) => {
   if (!existing) return error(404, 'Client introuvable');
   if (existing.anonymized_at) return error(409, 'Client anonymisé : modification impossible');
   const c = parseClient(await readJson(request));
-  const cols = ['type', 'status', ...CLIENT_FIELDS];
+  const cols = ['type', 'status', 'currency', 'tax_rate', ...CLIENT_FIELDS];
   await env.DB.prepare(
     `UPDATE clients SET ${cols.map((k) => `${k} = ?`).join(', ')}, updated_at = datetime('now') WHERE id = ?`,
   ).bind(...cols.map((k) => c[k as keyof typeof c]), id).run();

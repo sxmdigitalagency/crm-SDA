@@ -1,8 +1,8 @@
-import { CLIENT_LABEL_SQL, computeTotals, getLines, lineStatements, normalizeLines } from '../../lib/documents';
+import { CLIENT_LABEL_SQL, computeTotals, getLines, lineStatements, normalizeLines, parseCurrency, parseTaxRate, type Currency } from '../../lib/documents';
 import { error, HttpError, isoDate, json, oneOf, readJson, str, toId } from '../../lib/http';
 import type { Handler } from '../../lib/types';
 
-interface QuoteRow { id: number; status: string; tax_rate: number; issue_date: string; valid_until: string }
+interface QuoteRow { id: number; status: string; tax_rate: number; currency: Currency; issue_date: string; valid_until: string }
 
 export async function loadQuote(db: D1Database, id: number) {
   const quote = await db.prepare(
@@ -19,7 +19,7 @@ export const onRequestGet: Handler = async ({ params, env }) => {
 
 export const onRequestPut: Handler = async ({ params, request, env }) => {
   const id = toId(params.id);
-  const existing = await env.DB.prepare('SELECT id, status, tax_rate, issue_date, valid_until FROM quotes WHERE id = ?').bind(id).first<QuoteRow>();
+  const existing = await env.DB.prepare('SELECT id, status, tax_rate, currency, issue_date, valid_until FROM quotes WHERE id = ?').bind(id).first<QuoteRow>();
   if (!existing) return error(404, 'Devis introuvable');
   if (existing.status === 'converted') throw new HttpError(409, 'Devis converti en facture : non modifiable');
 
@@ -33,16 +33,18 @@ export const onRequestPut: Handler = async ({ params, request, env }) => {
 
   const lines = normalizeLines(body.lines);
   const discount = Math.max(0, Math.round(Number(body.discount) || 0));
-  const totals = computeTotals(lines, existing.tax_rate, discount);
+  const taxRate = parseTaxRate(body.tax_rate, existing.tax_rate);
+  const currency = parseCurrency(body.currency, existing.currency);
+  const totals = computeTotals(lines, taxRate, discount);
   const status = oneOf(body.status, ['draft', 'sent', 'accepted', 'declined'] as const, existing.status as 'draft');
   const clientId = toId(body.client_id);
 
   await env.DB.batch([
     env.DB.prepare(
-      `UPDATE quotes SET client_id=?, title=?, status=?, issue_date=?, valid_until=?, discount=?, subtotal=?, tax_amount=?, total=?, notes=?,
+      `UPDATE quotes SET client_id=?, title=?, status=?, issue_date=?, valid_until=?, tax_rate=?, currency=?, discount=?, subtotal=?, tax_amount=?, total=?, notes=?,
          updated_at=datetime('now') WHERE id=?`,
     ).bind(clientId, str(body.title, 200), status, isoDate(body.issue_date, existing.issue_date),
-      isoDate(body.valid_until, existing.valid_until), discount, totals.subtotal, totals.tax_amount, totals.total,
+      isoDate(body.valid_until, existing.valid_until), taxRate, currency, discount, totals.subtotal, totals.tax_amount, totals.total,
       str(body.notes, 5000), id),
     ...lineStatements(env.DB, 'quote', id, lines),
   ]);

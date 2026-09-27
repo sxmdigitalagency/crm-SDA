@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { date, money } from '../format.js';
+import { date, money, moneyByCurrency, sumByCurrency } from '../format.js';
 import { bindRowLinks, clientName, clientStatus, confirmDialog, errorState, html, ico, invoiceStatus, mount, quoteStatus, toast, toastError } from '../ui.js';
 
 export async function render(root, { match, navigate }) {
@@ -9,8 +9,9 @@ export async function render(root, { match, navigate }) {
   catch (err) { mount(root, errorState(err)); return; }
 
   const issued = c.invoices.filter((i) => i.status === 'issued' || i.status === 'paid');
-  const invoiced = issued.reduce((s, i) => s + i.total, 0);
-  const paid = issued.reduce((s, i) => s + i.amount_paid, 0);
+  const invoiced = sumByCurrency(issued, (i) => i.total);
+  const paid = sumByCurrency(issued, (i) => i.amount_paid);
+  const due = sumByCurrency(issued, (i) => i.total - i.amount_paid);
   const contact = [c.first_name, c.last_name].filter(Boolean).join(' ');
   const anonymized = Boolean(c.anonymized_at);
 
@@ -29,9 +30,9 @@ export async function render(root, { match, navigate }) {
     <div class="split">
       <div class="stack">
         <section class="pulse glass-panel pulse-3">
-          <div class="pulse-item"><span class="pulse-label">Facturé</span><span class="pulse-value num">${money(invoiced)}</span></div>
-          <div class="pulse-item"><span class="pulse-label">Encaissé</span><span class="pulse-value num">${money(paid)}</span></div>
-          <div class="pulse-item"><span class="pulse-label">Reste dû</span><span class="pulse-value num">${money(invoiced - paid)}</span></div>
+          <div class="pulse-item"><span class="pulse-label">Facturé</span><span class="pulse-value num">${moneyByCurrency(invoiced)}</span></div>
+          <div class="pulse-item"><span class="pulse-label">Encaissé</span><span class="pulse-value num">${moneyByCurrency(paid)}</span></div>
+          <div class="pulse-item"><span class="pulse-label">Reste dû</span><span class="pulse-value num">${moneyByCurrency(due)}</span></div>
         </section>
 
         <section class="panel flush glass-panel">
@@ -39,7 +40,7 @@ export async function render(root, { match, navigate }) {
           ${c.quotes.length ? html`<div class="table-wrap"><table class="data" data-quotes>
             <thead><tr><th>Numéro</th><th>Objet</th><th>Date</th><th>Statut</th><th class="r">Total TTC</th></tr></thead>
             <tbody>${c.quotes.map((q) => html`<tr data-href="/devis/${q.id}"><td class="ref">${q.number}</td><td>${q.title || '—'}</td><td class="ref">${date(q.issue_date)}</td>
-              <td>${quoteStatus({ ...q, expired: q.status === 'sent' && q.valid_until < new Date().toISOString().slice(0, 10) })}</td><td class="r">${money(q.total)}</td></tr>`)}</tbody></table></div>`
+              <td>${quoteStatus({ ...q, expired: q.status === 'sent' && q.valid_until < new Date().toISOString().slice(0, 10) })}</td><td class="r">${money(q.total, q.currency)}</td></tr>`)}</tbody></table></div>`
           : html`<p class="muted quiet" style="padding:0 var(--s-6) var(--s-5)">Aucun devis pour ce client.</p>`}
         </section>
 
@@ -48,7 +49,7 @@ export async function render(root, { match, navigate }) {
           ${c.invoices.length ? html`<div class="table-wrap"><table class="data" data-invoices>
             <thead><tr><th>Numéro</th><th>Objet</th><th>Échéance</th><th>Statut</th><th class="r">Total TTC</th></tr></thead>
             <tbody>${c.invoices.map((i) => html`<tr data-href="/factures/${i.id}"><td class="ref">${i.number ?? 'Brouillon'}</td><td>${i.title || '—'}</td><td class="ref">${date(i.due_date)}</td>
-              <td>${invoiceStatus({ ...i, overdue: i.status === 'issued' && i.due_date < new Date().toISOString().slice(0, 10) })}</td><td class="r">${money(i.total)}</td></tr>`)}</tbody></table></div>`
+              <td>${invoiceStatus({ ...i, overdue: i.status === 'issued' && i.due_date < new Date().toISOString().slice(0, 10) })}</td><td class="r">${money(i.total, i.currency)}</td></tr>`)}</tbody></table></div>`
           : html`<p class="muted quiet" style="padding:0 var(--s-6) var(--s-5)">Aucune facture pour ce client.</p>`}
         </section>
       </div>
@@ -59,10 +60,11 @@ export async function render(root, { match, navigate }) {
           <dl class="facts">
             ${contact && c.company_name ? html`<dt>Contact</dt><dd>${contact}</dd>` : ''}
             <dt>Email</dt><dd>${c.email ? html`<a href="mailto:${c.email}">${c.email}</a>` : '—'}</dd>
+            <dt>Facturation</dt><dd>${c.currency === 'USD' ? 'Dollars US' : 'Euros'}${c.tax_rate != null ? ` · taxe ${String(c.tax_rate).replace('.', ',')} %` : ''}</dd>
             <dt>Téléphone</dt><dd>${c.phone ? html`<a href="tel:${c.phone.replace(/\s/g, '')}">${c.phone}</a>` : '—'}</dd>
             <dt>Adresse</dt><dd>${[c.address, [c.postal_code, c.city].filter(Boolean).join(' '), c.country !== 'France' ? c.country : ''].filter(Boolean).join(', ') || '—'}</dd>
-            ${c.siret ? html`<dt>SIRET</dt><dd class="num">${c.siret}</dd>` : ''}
-            ${c.vat_number ? html`<dt>TVA</dt><dd class="num">${c.vat_number}</dd>` : ''}
+            ${c.siret ? html`<dt>Immatriculation</dt><dd class="num">${c.siret}</dd>` : ''}
+            ${c.vat_number ? html`<dt>N° fiscal</dt><dd class="num">${c.vat_number}</dd>` : ''}
           </dl>
           ${c.notes ? html`<p class="notes">${c.notes}</p>` : ''}
         </section>
