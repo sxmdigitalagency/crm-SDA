@@ -1,0 +1,26 @@
+{
+  "name": "crm-sda",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CRM + générateur de devis et factures — SDA Digital Agency",
+  "scripts": {
+    "dev": "wrangler pages dev public --port 8788",
+    "db:migrate:local": "wrangler d1 migrations apply crm-sda --local",
+    "db:seed:local": "node scripts/seed-demo.mjs",
+    "db:migrate:remote": "wrangler d1 migrations apply crm-sda --remote",
+    "hash-password": "node scripts/hash-password.mjs",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler pages deploy public"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260925.1",
+    "geist": "^1.7.2",
+    "lucide-static": "^1.48.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.0.0"
+  }
+}

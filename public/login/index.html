@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion · SDA</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <script>try { const t = localStorage.getItem('sda-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}</script>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .login { min-height: 100dvh; display: grid; place-items: center; padding: var(--s-6) var(--s-4); }
+    .login-card { width: min(400px, 100%); border-radius: 22px; padding: var(--s-8) var(--s-7) var(--s-7); display: flex; flex-direction: column; gap: var(--s-5); }
+    .login-card .brand { padding: 0; margin-bottom: var(--s-2); }
+    .login-card h1 { font-size: var(--t-2xl); font-weight: 650; }
+    .login-card p.muted { margin-top: var(--s-1); }
+    .login-card .btn { width: 100%; height: 42px; margin-top: var(--s-2); }
+    .login-error { font-size: var(--t-sm); color: var(--bad); }
+    .login-error:empty { display: none; }
+  </style>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  <main class="login">
+    <form class="login-card glass-float" id="form" novalidate>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">SDA</span><span><strong>SDA</strong><small>Digital Agency</small></span></div>
+      <div>
+        <h1>Connexion</h1>
+        <p class="muted">Accès réservé à l'espace de gestion SDA.</p>
+      </div>
+      <label class="field"><span>Email</span><input class="input" type="email" name="email" autocomplete="username" spellcheck="false" required autofocus></label>
+      <label class="field"><span>Mot de passe</span><input class="input" type="password" name="password" autocomplete="current-password" required></label>
+      <p class="login-error" id="error" role="alert"></p>
+      <button class="btn primary" type="submit">Se connecter</button>
+    </form>
+  </main>
+  <script type="module">
+    const form = document.getElementById('form');
+    const error = document.getElementById('error');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('button');
+      error.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Connexion…';
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(form))),
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Connexion impossible');
+        const next = new URLSearchParams(location.search).get('next');
+        location.href = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+      } catch (err) {
+        error.textContent = err.message;
+        form.password.select();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Se connecter';
+      }
+    });
+  </script>
+</body>
+</html>

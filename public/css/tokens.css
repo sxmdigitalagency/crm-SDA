@@ -1,0 +1,125 @@
+/* ─────────────────────────────────────────────────────────────
+   Design tokens — monde « Lagon » (SXM Digital Agency)
+   Thème : suit le système par défaut ; [data-theme] force clair/sombre.
+   ───────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/assets/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  /* Espacement — grille 4 px */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px; --s-9: 56px; --s-10: 72px;
+
+  /* Rayons */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
+
+  /* Typo — échelle fixe ~1.15 */
+  --font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --t-xs: 0.75rem; --t-sm: 0.8125rem; --t-md: 0.875rem; --t-lg: 1rem;
+  --t-xl: 1.125rem; --t-2xl: 1.375rem; --t-3xl: 1.75rem; --t-hero: 2.75rem;
+
+  /* Mouvement */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);        /* expo out */
+  --d-fast: 150ms; --d-base: 220ms; --d-slow: 600ms;
+
+  /* Fond vivant */
+  --bg: #e9f0ef;
+  --blob-1: #7fd6d3;   /* lagon clair */
+  --blob-2: #2a9ea6;   /* lagon profond */
+  --blob-3: #ffb59c;   /* corail */
+  --blob-4: #f4e2c4;   /* sable */
+
+  /* Matières verre */
+  --glass-float: rgba(255, 255, 255, 0.52);       /* navigation, barres flottantes */
+  --glass-panel: rgba(255, 255, 255, 0.74);       /* panneaux de contenu (lisibilité des chiffres) */
+  --glass-solid: rgba(250, 252, 252, 0.94);       /* dialogues, menus */
+  --glass-blur: 26px;
+  --glass-sat: 180%;
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+  --shadow-float: 0 10px 30px -12px rgba(8, 52, 60, 0.28), 0 2px 6px -2px rgba(8, 52, 60, 0.12);
+  --shadow-panel: 0 6px 22px -14px rgba(8, 52, 60, 0.3);
+  --shadow-pop: 0 24px 60px -20px rgba(8, 40, 48, 0.45);
+
+  /* Encre */
+  --ink: #0c1e23;
+  --ink-2: #33494f;
+  --ink-3: #536a70;
+  --line: rgba(12, 46, 54, 0.1);
+  --line-strong: rgba(12, 46, 54, 0.18);
+  --hover: rgba(0, 110, 120, 0.06);
+
+  /* Accent (actions, sélection, état) */
+  --accent: #007580;
+  --accent-hover: #00606a;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(0, 143, 153, 0.12);
+  --focus: 0 0 0 3px rgba(0, 143, 153, 0.35);
+
+  /* Statuts — toujours accompagnés d'un libellé */
+  --ok: #1d7a45;       --ok-soft: rgba(29, 122, 69, 0.12);
+  --warn: #9a5c00;     --warn-soft: rgba(196, 124, 0, 0.14);
+  --bad: #b8302f;      --bad-soft: rgba(200, 52, 52, 0.12);
+  --neutral-soft: rgba(12, 46, 54, 0.07);
+
+  /* Séries de données (validées dataviz : clair) */
+  --series-1: #008f99;  /* facturé */
+  --series-2: #df5b3a;  /* encaissé */
+  --grid: rgba(12, 46, 54, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #061318;
+    --blob-1: #0e5a63; --blob-2: #0a3a46; --blob-3: #6b2e22; --blob-4: #13303a;
+    --glass-float: rgba(18, 38, 46, 0.5);
+    --glass-panel: rgba(16, 32, 40, 0.72);
+    --glass-solid: rgba(14, 28, 35, 0.95);
+    --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --shadow-float: 0 12px 34px -12px rgba(0, 0, 0, 0.6), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+    --shadow-panel: 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+    --shadow-pop: 0 28px 70px -20px rgba(0, 0, 0, 0.75);
+    --ink: #e7f1f1; --ink-2: #b4c7ca; --ink-3: #8fa6ab;
+    --line: rgba(200, 235, 240, 0.09); --line-strong: rgba(200, 235, 240, 0.16);
+    --hover: rgba(90, 210, 215, 0.07);
+    --accent: #3cc2c7; --accent-hover: #62d3d7; --accent-ink: #042226;
+    --accent-soft: rgba(60, 194, 199, 0.14); --focus: 0 0 0 3px rgba(60, 194, 199, 0.4);
+    --ok: #4fc987; --ok-soft: rgba(79, 201, 135, 0.14);
+    --warn: #f0b24a; --warn-soft: rgba(240, 178, 74, 0.14);
+    --bad: #f07a78; --bad-soft: rgba(240, 122, 120, 0.14);
+    --neutral-soft: rgba(200, 235, 240, 0.08);
+    --series-1: #1a9ca3; --series-2: #e2653e;
+    --grid: rgba(200, 235, 240, 0.07);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #061318;
+  --blob-1: #0e5a63; --blob-2: #0a3a46; --blob-3: #6b2e22; --blob-4: #13303a;
+  --glass-float: rgba(18, 38, 46, 0.5);
+  --glass-panel: rgba(16, 32, 40, 0.72);
+  --glass-solid: rgba(14, 28, 35, 0.95);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-float: 0 12px 34px -12px rgba(0, 0, 0, 0.6), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-panel: 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 28px 70px -20px rgba(0, 0, 0, 0.75);
+  --ink: #e7f1f1; --ink-2: #b4c7ca; --ink-3: #8fa6ab;
+  --line: rgba(200, 235, 240, 0.09); --line-strong: rgba(200, 235, 240, 0.16);
+  --hover: rgba(90, 210, 215, 0.07);
+  --accent: #3cc2c7; --accent-hover: #62d3d7; --accent-ink: #042226;
+  --accent-soft: rgba(60, 194, 199, 0.14); --focus: 0 0 0 3px rgba(60, 194, 199, 0.4);
+  --ok: #4fc987; --ok-soft: rgba(79, 201, 135, 0.14);
+  --warn: #f0b24a; --warn-soft: rgba(240, 178, 74, 0.14);
+  --bad: #f07a78; --bad-soft: rgba(240, 122, 120, 0.14);
+  --neutral-soft: rgba(200, 235, 240, 0.08);
+  --series-1: #1a9ca3; --series-2: #e2653e;
+  --grid: rgba(200, 235, 240, 0.07);
+}

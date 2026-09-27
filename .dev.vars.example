@@ -1,0 +1,5 @@
+# Copier en .dev.vars (jamais commité) pour le dev local.
+# Email et hash du mot de passe du compte unique (mono-utilisateur).
+# Générer le hash : npm run hash-password -- "votre-mot-de-passe"
+ADMIN_EMAIL=contact@sda.example
+ADMIN_PASSWORD_HASH=

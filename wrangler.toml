@@ -1,0 +1,11 @@
+name = "crm-sda"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crm-sda"
+# Remplacer par l'ID réel après `wrangler d1 create crm-sda`
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
