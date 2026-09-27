@@ -3,7 +3,7 @@ import { HttpError, json, readJson, str } from '../../lib/http';
 import type { Handler } from '../../lib/types';
 
 const TEXT_FIELDS = [
-  'company_name', 'company_address', 'company_email', 'company_phone', 'company_website',
+  'company_name', 'owner_name', 'legal_form', 'company_address', 'company_email', 'company_phone', 'company_website',
   'siret', 'vat_number', 'iban', 'tax_label', 'tax_exempt_mention', 'quote_terms', 'invoice_terms',
 ] as const;
 
@@ -29,13 +29,13 @@ export const onRequestPut: Handler = async ({ request, env }) => {
   }
 
   await env.DB.prepare(
-    `UPDATE settings SET company_name=?, company_address=?, company_email=?, company_phone=?, company_website=?,
+    `UPDATE settings SET company_name=?, owner_name=?, legal_form=?, company_address=?, company_email=?, company_phone=?, company_website=?,
        siret=?, vat_number=?, iban=?, tax_label=?, tax_rate=?, tax_exempt_mention=?, quote_prefix=?, invoice_prefix=?,
        quote_validity_days=?, payment_terms_days=?, quote_terms=?, invoice_terms=?, default_currency=?, updated_at=datetime('now')
      WHERE id = 1`,
   )
     .bind(
-      next.company_name, next.company_address, next.company_email, next.company_phone, next.company_website,
+      next.company_name, next.owner_name, next.legal_form, next.company_address, next.company_email, next.company_phone, next.company_website,
       next.siret, next.vat_number, next.iban, next.tax_label, next.tax_rate, next.tax_exempt_mention,
       next.quote_prefix, next.invoice_prefix, next.quote_validity_days, next.payment_terms_days,
       next.quote_terms, next.invoice_terms, next.default_currency,

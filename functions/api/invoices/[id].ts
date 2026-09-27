@@ -75,7 +75,7 @@ export const onRequestPut: Handler = async ({ params, request, env }) => {
     db.prepare(
       `UPDATE invoices SET client_id=?, title=?, tax_rate=?, currency=?, discount=?, subtotal=?, tax_amount=?, total=?, notes=?, updated_at=datetime('now')
        WHERE id=? AND status='draft'`,
-    ).bind(toId(body.client_id), str(body.title, 200), taxRate, currency, discount, totals.subtotal, totals.tax_amount, totals.total, str(body.notes, 5000), id),
+    ).bind(toId(body.client_id), str(body.title, 300), taxRate, currency, discount, totals.subtotal, totals.tax_amount, totals.total, str(body.notes, 5000), id),
     ...lineStatements(db, 'invoice', id, lines),
   ]);
   return json(await loadInvoice(db, id));

@@ -43,7 +43,7 @@ export const onRequestPut: Handler = async ({ params, request, env }) => {
     env.DB.prepare(
       `UPDATE quotes SET client_id=?, title=?, status=?, issue_date=?, valid_until=?, tax_rate=?, currency=?, discount=?, subtotal=?, tax_amount=?, total=?, notes=?,
          updated_at=datetime('now') WHERE id=?`,
-    ).bind(clientId, str(body.title, 200), status, isoDate(body.issue_date, existing.issue_date),
+    ).bind(clientId, str(body.title, 300), status, isoDate(body.issue_date, existing.issue_date),
       isoDate(body.valid_until, existing.valid_until), taxRate, currency, discount, totals.subtotal, totals.tax_amount, totals.total,
       str(body.notes, 5000), id),
     ...lineStatements(env.DB, 'quote', id, lines),

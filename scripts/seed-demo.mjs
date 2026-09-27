@@ -61,7 +61,7 @@ const sql = [
   `UPDATE settings SET company_name='SXM Digital Agency', company_address='1 rue de l’Exemple\n97150 Marigot, Saint-Martin',
      company_email='contact@sda.example', company_phone='0690 00 00 00', company_website='sda.example',
      siret='000 000 000 00000', iban='FR76 0000 0000 0000 0000 0000 000', tax_label='TGCA', tax_rate=4.0, default_currency='EUR',
-     quote_terms='Devis valable 30 jours. Acompte de 30 % à la signature, solde à la livraison.' WHERE id = 1;`,
+     owner_name='Mathys', legal_form='EI', company_website='sxmdigitalagency.example' WHERE id = 1;`,
 ];
 
 services.forEach(([cat, name, desc, unit, price], i) =>

@@ -133,6 +133,8 @@ export interface Settings {
   company_email: string;
   company_phone: string;
   company_website: string;
+  owner_name: string;
+  legal_form: string;
   siret: string;
   vat_number: string;
   iban: string;

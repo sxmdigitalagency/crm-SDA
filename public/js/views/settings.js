@@ -18,15 +18,16 @@ export async function render(root) {
       <div class="stack">
         <section class="panel glass-panel"><div class="form-section"><h3>Entreprise</h3><div class="form-grid">
           ${f('company_name', 'Nom commercial', { span: true })}
+          ${f('owner_name', 'Responsable', { placeholder: 'Prénom Nom…' })}${f('legal_form', 'Statut juridique', { placeholder: 'EI, SAS, SARL…' })}
           ${f('company_address', 'Adresse', { span: true, area: true, rows: 2 })}
           ${f('company_email', 'Email', { type: 'email' })}${f('company_phone', 'Téléphone')}
           ${f('company_website', 'Site web')}${f('siret', 'SIRET')}
-          ${f('vat_number', 'N° fiscal (si applicable)')}${f('iban', 'IBAN', { help: 'Affiché sur les factures pour le règlement par virement.' })}
+          ${f('vat_number', `NIF (${s.tax_label})`, { help: 'Affiché « NIF (' + s.tax_label + ') » sur les devis et factures.' })}${f('iban', 'IBAN', { help: 'Affiché sur les factures pour le règlement par virement.' })}
         </div></div></section>
 
         <section class="panel glass-panel"><div class="form-section"><h3>Mentions sur les documents</h3><div class="form-grid">
-          ${f('quote_terms', 'Conditions du devis', { span: true, area: true, placeholder: 'Validité, acompte, délais de réalisation…' })}
-          ${f('invoice_terms', 'Mentions de la facture', { span: true, area: true, rows: 4, help: 'Pénalités de retard et indemnité forfaitaire de recouvrement : mentions obligatoires entre professionnels. Faites valider ce texte par votre expert-comptable.' })}
+          ${f('quote_terms', 'Conditions du devis', { span: true, area: true, rows: 7, placeholder: 'Validité : 30 jours à compter de la date d’émission.…', help: 'Une condition par ligne, au format « Libellé : texte ». Le libellé apparaît en gras sur le PDF.' })}
+          ${f('invoice_terms', 'Mentions de la facture', { span: true, area: true, rows: 5, help: 'Pénalités de retard et indemnité forfaitaire de recouvrement : mentions obligatoires entre professionnels. Faites valider ce texte par votre expert-comptable.' })}
         </div></div></section>
       </div>
 

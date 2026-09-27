@@ -36,7 +36,7 @@ export const onRequestPost: Handler = async ({ request, env }) => {
   const row = await env.DB.prepare(
     `INSERT INTO quotes (number, client_id, title, issue_date, valid_until, tax_rate, currency, discount, subtotal, tax_amount, total, notes)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-  ).bind(number, clientId, str(body.title, 200), issue, validUntil, tax_rate, currency, discount,
+  ).bind(number, clientId, str(body.title, 300), issue, validUntil, tax_rate, currency, discount,
     totals.subtotal, totals.tax_amount, totals.total, str(body.notes, 5000)).first<{ id: number }>();
 
   await env.DB.batch(lineStatements(env.DB, 'quote', row!.id, lines));
