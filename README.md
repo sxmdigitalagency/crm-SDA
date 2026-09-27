@@ -25,19 +25,43 @@ npm run hash-password -- "un-mot-de-passe-long"
 cp .dev.vars.example .dev.vars   # puis coller le hash dans ADMIN_PASSWORD_HASH
 ```
 
-## Déployer sur Cloudflare
+## Déployer sur Cloudflare (tableau de bord, sans ligne de commande)
+
+Les libellés exacts du tableau de bord Cloudflare peuvent varier légèrement.
+
+1. **Base de données** — *Storage & Databases → D1 → Create* : nommer `crm-sda`, puis copier le **Database ID**
+   dans `wrangler.toml` (`database_id`) et le pousser sur `main`. Ce n'est pas un secret.
+2. **Schéma** — ouvrir la base → *Console* → coller le contenu de [`deploy/d1-setup.sql`](deploy/d1-setup.sql)
+   → *Execute*. Contrôle : `SELECT name FROM d1_migrations;` doit renvoyer 3 lignes.
+   Ce fichier enregistre les migrations comme `wrangler` : `npm run db:migrate:remote` restera utilisable.
+   Il se régénère avec `npm run build:d1-setup` et ne contient aucune donnée de démo.
+3. **Mot de passe** — télécharger [`scripts/hash-password.html`](scripts/hash-password.html), l'ouvrir en local
+   dans le navigateur, générer le hash. Rien n'est envoyé sur Internet.
+4. **Projet Pages** — *Workers & Pages → Create → Pages → Connect to Git* → dépôt `sxmdigitalagency/crm-SDA` :
+   - branche de production : `main`
+   - framework : *None* · commande de build : `npm run build` · répertoire de sortie : `public`
+5. **Secrets** — projet → *Settings → Variables and secrets* → environnement **Production** → ajouter en type
+   *Secret* : `ADMIN_EMAIL` (votre email) et `ADMIN_PASSWORD_HASH` (le hash de l'étape 3). Relancer un déploiement
+   (*Deployments → Retry*) : un secret ne s'applique qu'aux nouveaux déploiements.
+6. **Aperçus** — *Settings → Builds → Branch control* : désactiver les déploiements d'aperçu, ou ne jamais y
+   définir les secrets. Les aperçus utilisent la **même base D1** que la production (binding unique dans
+   `wrangler.toml`) ; sans secrets ils répondent 503, ce qui les rend inoffensifs.
+
+Tant que les secrets ne sont pas définis, le site en ligne répond **503** partout : il ne s'ouvre jamais sans mot de passe.
+
+### Alternative en ligne de commande
 
 ```bash
 npx wrangler d1 create crm-sda            # copier le database_id dans wrangler.toml
 npm run db:migrate:remote
-npx wrangler pages project create crm-sda
 npx wrangler pages secret put ADMIN_EMAIL --project-name crm-sda
 npx wrangler pages secret put ADMIN_PASSWORD_HASH --project-name crm-sda
 npm run deploy
 ```
 
-Le seed de démo refuse de s'exécuter en `--remote` et n'est pas dans `migrations/`
-(sinon `migrations apply --remote` l'appliquerait en production).
+Le seed de démo refuse de s'exécuter en `--remote` et n'est pas dans `migrations/`.
+
+**Connexion** : 10 échecs depuis une même adresse IP bloquent les tentatives pendant 15 minutes.
 
 ## Règles métier
 

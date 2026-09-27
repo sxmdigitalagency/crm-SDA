@@ -11,7 +11,9 @@
     "db:migrate:remote": "wrangler d1 migrations apply crm-sda --remote",
     "hash-password": "node scripts/hash-password.mjs",
     "typecheck": "tsc --noEmit",
-    "deploy": "wrangler pages deploy public"
+    "deploy": "wrangler pages deploy public",
+    "build": "node scripts/build-icons.mjs",
+    "build:d1-setup": "node scripts/build-d1-setup.mjs"
   },
   "dependencies": {
     "pdf-lib": "^1.17.1"
