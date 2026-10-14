@@ -286,6 +286,15 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
   const ensure = (h: number, header = false) => {
     if (y + h > CONTENT_BOTTOM) { newPage(); if (header) tableHeader(); }
   };
+  // Une page neuve offre au plus cette hauteur : au-delà, un bloc doit être découpé.
+  const PAGE_ROOM = CONTENT_BOTTOM - 66;
+  // Ligne de base suivante d'un texte qui coule en pleine largeur ; change de page si nécessaire.
+  const flowLine = (b: number, step: number) => {
+    const next = b + step;
+    if (next + 6 <= CONTENT_BOTTOM) return next;
+    newPage();
+    return y + 9;
+  };
 
   tableHeader();
   for (const line of doc.lines) {
@@ -319,11 +328,12 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
   const exempt = doc.tax_rate === 0 && s.tax_exempt_mention ? wrap(s.tax_exempt_mention, R - TX, { size: 8.3 }) : [];
   const notes = doc.notes.trim() ? wrap(doc.notes, 312 - L - 20, { size: 8.6 }) : [];
   const totalsH = 23.3 + (rows.length - 1) * 22.6 + 9 + 33.7 + paidRows.length * 20 + exempt.length * 11 + (exempt.length ? 6 : 0);
-  const notesH = notes.length ? 30 + notes.length * 12.7 : 0;
+  const longNotes = 30 + notes.length * 12.7 > PAGE_ROOM;
+  const notesH = notes.length && !longNotes ? 30 + notes.length * 12.7 : 0;
   ensure(Math.max(totalsH, notesH));
 
   const top = y;
-  if (notes.length) {
+  if (notes.length && !longNotes) {
     text('NOTES', L, top + 23.3, SECTION);
     notes.forEach((l, i) => text(l, L, top + 41 + i * 12.7, { size: 8.6 }));
   }
@@ -350,6 +360,14 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
   });
   exempt.forEach((l, i) => text(l, R - 8.6, base + 14 + i * 11, { size: 8.3, color: GREY, align: 'right' }));
   y = top + Math.max(totalsH, notesH) + 17.6;
+  if (longNotes) {
+    // Notes trop longues pour une page : pleine largeur, découpées ligne par ligne.
+    ensure(30);
+    text('NOTES', L, y + 7.1, SECTION);
+    let b = y + 7.1;
+    wrap(doc.notes, R - L, { size: 8.6 }).forEach((l, i) => { b = flowLine(b, i ? 12.7 : 17.7); text(l, L, b, { size: 8.6 }); });
+    y = b + 17.6;
+  }
 
   // ── Conditions + Bon pour accord / Règlement ──────────────
   const terms = (isQuote ? s.quote_terms : s.invoice_terms) ?? '';
@@ -357,8 +375,10 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
     const m = t.match(/^([^:]{1,40}?)\s*:\s*(.+)$/);
     return m ? { label: `${m[1]} :`, body: m[2]! } : { label: '', body: t };
   });
-  const CW = 322.5 - L;
-  const layoutItem = (it: { label: string; body: string }) => {
+  // Titres d'articles de CGV (« Article 3 – Paiement ») : mis en valeur comme les libellés.
+  const isTitle = (it: { label: string; body: string }) => !it.label && /^(article|art\.)\s*\d+/i.test(it.body);
+  const bodyStyle = (it: { label: string; body: string }) => isTitle(it) ? { font: fonts.bold, size: 8.6, color: TEAL } : { size: 8.6 };
+  const layoutItem = (it: { label: string; body: string }, CW = 322.5 - L) => {
     const lw = it.label ? width(`${it.label} `, { font: fonts.bold, size: 8.6 }) : 0;
     const words = it.body.split(/\s+/);
     const lines: string[] = [];
@@ -366,7 +386,7 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
     for (const w of words) {
       const test = line ? `${line} ${w}` : w;
       const avail = lines.length === 0 ? CW - lw : CW;
-      if (width(test, { size: 8.6 }) <= avail || !line) line = test;
+      if (width(test, bodyStyle(it)) <= avail || !line) line = test;
       else { lines.push(line); line = w; }
     }
     lines.push(line);
@@ -387,20 +407,23 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
   const introLines = wrap(accord.intro, AW - 28.8, { size: 8.3 });
   const accordMin = 19 + 18 + (introLines.length - 1) * 12 + 12 + 15 + (accord.fields.length - 1) * 24 + 30;
   const blockH = Math.max(condH, accordMin);
-  ensure(blockH);
+  // Conditions longues (CGV) : le bloc côte à côte ne tient pas sur une page.
+  const long = blockH > PAGE_ROOM;
+  ensure(long ? accordMin : blockH);
   const t0 = y;
-  if (items.length) {
+  if (items.length && !long) {
     text('CONDITIONS', L, t0 + 7.1, SECTION);
     let b = t0 + 28.1;
     laid.forEach((l, i) => {
       if (i) b += 12.8;
       if (l.it.label) text(l.it.label, L, b, { font: fonts.bold, size: 8.6, color: TEAL });
-      l.lines.forEach((ln, j) => { if (j) b += 12.7; text(ln, j === 0 ? L + l.lw : L, b, { size: 8.6 }); });
+      l.lines.forEach((ln, j) => { if (j) b += 12.7; text(ln, j === 0 ? L + l.lw : L, b, bodyStyle(l.it)); });
       b += 6;
       hline(L, 322.5, b, { dashed: true });
     });
   }
-  box(AX, t0, AW, blockH, { stroke: TEAL, radius: 6, strokeWidth: 0.75 });
+  const accordH = long ? accordMin : blockH;
+  box(AX, t0, AW, accordH, { stroke: TEAL, radius: 6, strokeWidth: 0.75 });
   text(accord.heading, AX + 14.4, t0 + 19, SECTION);
   let ab = t0 + 37;
   introLines.forEach((l, i) => { if (i) ab += 12; text(l, AX + 14.4, ab, { size: 8.3, color: GREY }); });
@@ -408,7 +431,24 @@ export async function renderPdf(doc: PdfDocumentData, s: Settings, assets: PdfAs
   hline(AX + 14.6, AX + AW - 14.6, ab, { dashed: true });
   ab += 15;
   accord.fields.forEach((f, i) => { if (i) ab += 24; text(f, AX + 14.4, ab, { size: 8.3, color: GREY }); });
-  y = t0 + blockH;
+  y = t0 + accordH;
+  if (items.length && long) {
+    // Cadre seul à droite, puis conditions en pleine largeur qui passent de page en page.
+    y += 17.6;
+    ensure(28.1 + 6);
+    text('CONDITIONS', L, y + 7.1, SECTION);
+    let b = y + 7.1;
+    items.forEach((it, i) => {
+      const l = layoutItem(it, R - L);
+      l.lines.forEach((ln, j) => {
+        b = flowLine(b, j ? 12.7 : i ? 18.8 : 21);
+        if (j === 0 && it.label) text(it.label, L, b, { font: fonts.bold, size: 8.6, color: TEAL });
+        text(ln, j === 0 ? L + l.lw : L, b, bodyStyle(it));
+      });
+      hline(L, R, b + 6, { dashed: true });
+    });
+    y = b + 6;
+  }
 
   // ── Pied de page (toutes les pages) ───────────────────────
   const pages = pdf.getPages();
