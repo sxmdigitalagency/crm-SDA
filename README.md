@@ -126,6 +126,16 @@ Monde visuel « Lagon » : fond vivant turquoise/corail, verre réservé aux sur
 Thème clair / sombre / système. Tokens dans `public/css/tokens.css`, un seul accent à changer.
 Couleurs des séries de graphiques validées (daltonisme, contraste) en clair et en sombre.
 
+## Prospection US (en construction, phase 0)
+
+Pipeline de prospection par email (spec `spec-agents-prospection-us.md`), construit phase par phase.
+Phase 0 seulement : tables `prospect_*` (migration `0005`) dans la même base D1 que le CRM, et un Worker
+`workers/prospection/` qui ne fait rien encore (aucun cron, aucun envoi, `sending_enabled = 0`).
+Les hypothèses (métiers, comtés, cadence, seuils) sont dans la table `prospect_config`, pas dans le code.
+
+Le CRM tourne sur Pages, qui ne gère pas les tâches planifiées ni les files : la prospection a donc son Worker,
+relié à la même base. Rien n'est déployé tant que la phase 1 n'est pas validée.
+
 ## Structure
 
 ```
@@ -134,4 +144,5 @@ functions/            API (Pages Functions) — _middleware.ts gère l'auth
 migrations/           schéma D1
 public/               app (routeur SPA léger) + page /login
 scripts/              hash de mot de passe, seed de démo, génération des icônes
+workers/prospection/  Worker de prospection (phase 0 : fondations)
 ```

@@ -1,0 +1,17 @@
+# Worker de prospection (phase 0 : fondations, ne fait rien).
+# Même base D1 que le CRM : les migrations vivent dans ../../migrations et s'appliquent depuis la racine du dépôt.
+# Aucun cron ni Queue tant que les phases suivantes ne sont pas validées par Mathys.
+name = "sda-prospection"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Nom du modèle LLM : choisi au moment de la phase 2, jamais en dur dans le code.
+LLM_MODEL = ""
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crm-sda"
+database_id = "b0fd2569-05f1-4396-b70d-c9306c0c1863"
+migrations_dir = "../../migrations"
