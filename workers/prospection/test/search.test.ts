@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chooseWebsite, isExcluded, nameSignal } from '../src/search/select';
-import { mojeekProvider, SearchLockedError } from '../src/search/mojeek';
+import { mojeekProbe, mojeekProvider, SearchLockedError } from '../src/search/mojeek';
 import type { SearchProvider, SearchResult } from '../src/search/provider';
 
 const UA = 'SDA-Research-Bot/1.0 (+https://sxmdigitalagency.com)';
@@ -81,8 +81,63 @@ test('aucun candidat utilisable → none', async () => {
   assert.equal(web.fetched.length, 0);
 });
 
-test('Mojeek verrouillé : conditions non lues, URL non vérifiée ou clé absente', () => {
-  assert.throws(() => mojeekProvider({ apiKey: 'k', termsRead: false, endpointVerified: true }), SearchLockedError);
-  assert.throws(() => mojeekProvider({ apiKey: 'k', termsRead: true, endpointVerified: false }), SearchLockedError);
-  assert.throws(() => mojeekProvider({ apiKey: undefined, termsRead: true, endpointVerified: true }), SearchLockedError);
+const KEY = 'sk-test-SECRET-123';
+const FIELDS = { results_path: 'response.results', url: 'url', title: 'title' };
+function fakeApi(body: unknown, status = 200) {
+  const calls: URL[] = [];
+  const fetch = (async (input: RequestInfo | URL) => {
+    calls.push(new URL(String(input)));
+    return new Response(typeof body === 'string' ? body : JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  }) as typeof globalThis.fetch;
+  return { fetch, calls };
+}
+const base = (fetch: typeof globalThis.fetch) => ({ apiKey: KEY, termsRead: true, endpointBase: 'https://api.mojeek.com/search', fetch });
+const ok = (fetch: typeof globalThis.fetch) => ({ ...base(fetch), endpointVerified: true, resultFields: FIELDS });
+
+test('Mojeek verrouillé : conditions non lues, URL non vérifiée, champs non remplis ou clé absente', () => {
+  const { fetch } = fakeApi({});
+  assert.throws(() => mojeekProvider({ ...ok(fetch), termsRead: false }), SearchLockedError);
+  assert.throws(() => mojeekProvider({ ...ok(fetch), endpointVerified: false }), SearchLockedError);
+  assert.throws(() => mojeekProvider({ ...ok(fetch), resultFields: null }), SearchLockedError);
+  assert.throws(() => mojeekProvider({ ...ok(fetch), apiKey: undefined }), SearchLockedError);
+});
+
+test('Mojeek : URL = base de la config + q, api_key, fmt=json, t (paramètres confirmés seulement)', async () => {
+  const api = fakeApi({ response: { results: [] } });
+  await mojeekProvider({ ...ok(api.fetch), endpointBase: 'https://www.mojeek.com/search' }).search('"Cool Air Pro" Tampa FL', 5);
+  const u = api.calls[0]!;
+  assert.equal(u.origin + u.pathname, 'https://www.mojeek.com/search');
+  assert.deepEqual([...u.searchParams.keys()].sort(), ['api_key', 'fmt', 'q', 't']);
+  assert.equal(u.searchParams.get('fmt'), 'json');
+  assert.equal(u.searchParams.get('t'), '5');
+  assert.equal(u.searchParams.get('q'), '"Cool Air Pro" Tampa FL');
+});
+
+test('Mojeek : lit uniquement les champs configurés ; champ manquant → erreur, pas d’autre nom essayé', async () => {
+  const good = fakeApi({ response: { results: [{ url: 'https://a.com/', title: 'A', extra: 1 }] } });
+  assert.deepEqual(await mojeekProvider(ok(good.fetch)).search('q', 5), [{ url: 'https://a.com/', title: 'A' }]);
+  const other = fakeApi({ response: { results: [{ link: 'https://a.com/', title: 'A' }] } });
+  await assert.rejects(mojeekProvider(ok(other.fetch)).search('q', 5), /champ « url » absent du résultat 1/);
+  const noList = fakeApi({ data: [] });
+  await assert.rejects(mojeekProvider(ok(noList.fetch)).search('q', 5), /« response\.results » absent/);
+});
+
+test('Mojeek : la clé n’apparaît dans aucun message d’erreur', async () => {
+  const errors: string[] = [];
+  for (const api of [fakeApi({}, 403), fakeApi('<xml/>'), { fetch: (async () => { throw new TypeError(`fetch failed for https://api.mojeek.com/search?api_key=${KEY}`); }) as typeof globalThis.fetch }]) {
+    try { await mojeekProvider(ok(api.fetch)).search('q', 5); } catch (e) { errors.push(String(e)); }
+    try { await mojeekProbe(base(api.fetch), 'q'); } catch (e) { errors.push(String(e)); }
+  }
+  assert.equal(errors.length, 6);
+  for (const e of errors) assert.ok(!e.includes(KEY), e);
+});
+
+test('sonde : forme sans valeurs, champs du premier résultat, refus si conditions non lues', async () => {
+  const api = fakeApi({ response: { status: 'OK', head: { query: 'secret query' }, results: [{ url: 'https://a.com/', title: 'Titre visible', desc: 'x' }] } });
+  const r = await mojeekProbe(base(api.fetch), 'q');
+  assert.deepEqual(r.topLevelKeys, ['response']);
+  assert.deepEqual(r.firstResult, { path: 'response.results', fields: ['url', 'title', 'desc'] });
+  const printed = JSON.stringify(r);
+  assert.ok(!printed.includes('Titre visible') && !printed.includes('secret query') && !printed.includes('a.com'), 'aucune valeur dans la sonde');
+  await assert.rejects(mojeekProbe({ ...base(api.fetch), termsRead: false }, 'q'), SearchLockedError);
 });

@@ -46,7 +46,12 @@ export interface ProspectConfig {
   rubricWeights: Record<string, number>;
   rubricScoreMax: number;
   bookingTextOnlyCountsAsWidget: boolean;
+  searchEndpointBase: string;
+  /** null tant que Mathys ne l'a pas rempli d'après --probe : la recherche reste alors verrouillée. */
+  searchResultFields: SearchResultFields | null;
 }
+
+export interface SearchResultFields { results_path: string; url: string; title: string }
 
 export class ConfigError extends Error {}
 
@@ -114,5 +119,19 @@ export async function loadConfig(env: Env): Promise<ProspectConfig> {
     rubricWeights: json('rubric_weights'),
     rubricScoreMax: num('rubric_score_max'),
     bookingTextOnlyCountsAsWidget: bool('booking_text_only_counts_as_widget'),
+    searchEndpointBase: str('search_endpoint_base'),
+    searchResultFields: resultFields(str('search_result_fields')),
   };
+}
+
+/** Vide → null (non rempli). Rempli mais mal formé → erreur claire (jamais de valeur devinée). */
+function resultFields(raw: string): SearchResultFields | null {
+  if (raw.trim() === '') return null;
+  let v: unknown;
+  try { v = JSON.parse(raw); } catch { throw new ConfigError('prospect_config : « search_result_fields » n\'est pas du JSON valide'); }
+  const o = v as Record<string, unknown>;
+  for (const k of ['results_path', 'url', 'title'] as const) {
+    if (typeof o?.[k] !== 'string' || !(o[k] as string).trim()) throw new ConfigError(`prospect_config : « search_result_fields.${k} » manquant ou vide`);
+  }
+  return { results_path: o.results_path as string, url: o.url as string, title: o.title as string };
 }

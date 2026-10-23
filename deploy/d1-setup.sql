@@ -375,3 +375,7 @@ INSERT OR IGNORE INTO prospect_config (key, value) VALUES
   ('rubric_score_max', '85'),
   ('booking_text_only_counts_as_widget', '0');
 INSERT INTO d1_migrations (name) VALUES ('0007_prospection_search.sql');
+INSERT OR IGNORE INTO prospect_config (key, value) VALUES
+  ('search_endpoint_base', 'https://api.mojeek.com/search'),
+  ('search_result_fields', '');
+INSERT INTO d1_migrations (name) VALUES ('0008_prospection_search_endpoint.sql');

@@ -129,7 +129,7 @@ Couleurs des séries de graphiques validées (daltonisme, contraste) en clair et
 ## Prospection US (en construction, phase 1)
 
 Pipeline de prospection par email, construit phase par phase : spec dans `docs/prospection/spec-agents-prospection-us.md`.
-Tables `prospect_*` (migrations `0005` à `0007`) dans la même base D1 que le CRM ; aucune écriture dans les tables du CRM.
+Tables `prospect_*` (migrations `0005` à `0008`) dans la même base D1 que le CRM ; aucune écriture dans les tables du CRM.
 Les hypothèses (métiers, comtés, cadence, seuils, listes de détection) sont dans `prospect_config`, pas dans le code.
 Envoi et envoi automatique désactivés ; `enrich_enabled = 0` tant que la phase 1 n'est pas validée.
 
@@ -141,6 +141,7 @@ Envoi et envoi automatique désactivés ; `enrich_enabled = 0` tant que la phase
 - **Recherche du site** (Mojeek, verrouillée tant que `search_provider_terms_read` et `search_endpoint_verified` = 0
   et sans clé `MOJEEK_API_KEY`) : `node scripts/prospection/run-search.mjs`. Deux signaux (nom + ville ou licence)
   → `website_status = accepted` ; un seul → `review` (contrôle humain) ; annuaires et réseaux sociaux exclus.
+  Sonde (une requête réelle, rien en base) : `node scripts/prospection/run-search.mjs --probe "<requête>"`.
   Contrôle : `node scripts/prospection/export-search.mjs`.
 - **enrich** : à la main par lots, `node scripts/prospection/run-enrich.mjs [--batch 25] [--retry-failed]`
   (mêmes modules que le Worker `workers/prospection/`, qui reste désactivé). Seuls les sites `accepted` sont crawlés.
