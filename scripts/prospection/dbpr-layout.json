@@ -4,6 +4,7 @@
   "_doc_read_on": null,
   "file_name": null,
   "has_header_row": null,
+  "file_encoding": null,
   "columns": {
     "license_number": null,
     "class_code": null,

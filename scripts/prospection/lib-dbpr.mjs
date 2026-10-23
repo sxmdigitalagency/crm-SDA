@@ -8,6 +8,7 @@ export function loadLayout(path) {
   if (!layout._doc_url) missing.push('_doc_url');
   if (layout.has_header_row === null) missing.push('has_header_row');
   if (!Array.isArray(layout.active_status_values)) missing.push('active_status_values');
+  if (!['ascii', 'latin1', 'utf8'].includes(layout.file_encoding)) missing.push('file_encoding (ascii | latin1 | utf8)');
   if (missing.length) {
     throw new Error(`Gabarit DBPR incomplet (${path}) : ${missing.join(', ')}.\n` +
       `Ces valeurs doivent venir de la documentation officielle du format, pas d'une supposition.`);
@@ -16,13 +17,15 @@ export function loadLayout(path) {
 }
 
 /** Lecteur CSV « guillemets / virgules » (format annoncé par le readme DBPR), ligne logique par ligne logique. */
-export async function* readCsv(path) {
+export async function* readCsv(path, encoding) {
   let field = '';
   let row = [];
   let inQuotes = false;
   let pendingQuote = false;
-  const stream = createReadStream(path, { encoding: 'latin1' });
+  // « ascii » : lu en latin1 puis vérifié, car le décodeur ascii de Node masque silencieusement les octets > 127.
+  const stream = createReadStream(path, { encoding: encoding === 'ascii' ? 'latin1' : encoding });
   for await (const chunk of stream) {
+    if (encoding === 'ascii' && /[^\x00-\x7f]/.test(chunk)) throw new Error('Octet non ASCII dans un fichier annoncé ASCII : vérifier file_encoding dans le gabarit.');
     for (let i = 0; i < chunk.length; i++) {
       const ch = chunk[i];
       if (pendingQuote) {

@@ -42,7 +42,7 @@ def get(row, key):
 
 seen = set()
 counts = collections.Counter()
-with open(a.file, newline='', encoding='latin-1') as f:
+with open(a.file, newline='', encoding={'ascii': 'ascii', 'latin1': 'latin-1', 'utf8': 'utf-8'}[layout['file_encoding']]) as f:
     reader = csv.reader(f)
     if layout['has_header_row']:
         next(reader, None)

@@ -36,6 +36,16 @@ export interface ProspectConfig {
   bookingWidgetHosts: string[];
   bookingTextPatterns: string[];
   chatWidgetHosts: string[];
+  searchProvider: string;
+  searchProviderTermsRead: boolean;
+  searchEndpointVerified: boolean;
+  searchEnabled: boolean;
+  searchMaxCandidates: number;
+  searchMaxChecked: number;
+  searchExcludedDomains: string[];
+  rubricWeights: Record<string, number>;
+  rubricScoreMax: number;
+  bookingTextOnlyCountsAsWidget: boolean;
 }
 
 export class ConfigError extends Error {}
@@ -94,5 +104,15 @@ export async function loadConfig(env: Env): Promise<ProspectConfig> {
     bookingWidgetHosts: json('booking_widget_hosts'),
     bookingTextPatterns: json('booking_text_patterns'),
     chatWidgetHosts: json('chat_widget_hosts'),
+    searchProvider: str('search_provider'),
+    searchProviderTermsRead: bool('search_provider_terms_read'),
+    searchEndpointVerified: bool('search_endpoint_verified'),
+    searchEnabled: bool('search_enabled'),
+    searchMaxCandidates: num('search_max_candidates'),
+    searchMaxChecked: num('search_max_checked'),
+    searchExcludedDomains: json('search_excluded_domains'),
+    rubricWeights: json('rubric_weights'),
+    rubricScoreMax: num('rubric_score_max'),
+    bookingTextOnlyCountsAsWidget: bool('booking_text_only_counts_as_widget'),
   };
 }

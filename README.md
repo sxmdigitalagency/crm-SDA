@@ -129,7 +129,7 @@ Couleurs des séries de graphiques validées (daltonisme, contraste) en clair et
 ## Prospection US (en construction, phase 1)
 
 Pipeline de prospection par email, construit phase par phase : spec dans `docs/prospection/spec-agents-prospection-us.md`.
-Tables `prospect_*` (migrations `0005`, `0006`) dans la même base D1 que le CRM ; aucune écriture dans les tables du CRM.
+Tables `prospect_*` (migrations `0005` à `0007`) dans la même base D1 que le CRM ; aucune écriture dans les tables du CRM.
 Les hypothèses (métiers, comtés, cadence, seuils, listes de détection) sont dans `prospect_config`, pas dans le code.
 Envoi et envoi automatique désactivés ; `enrich_enabled = 0` tant que la phase 1 n'est pas validée.
 
@@ -138,9 +138,15 @@ Envoi et envoi automatique désactivés ; `enrich_enabled = 0` tant que la phase
   `python3 scripts/prospection/count-dbpr.py --file <fichier DBPR>` (comptage indépendant), puis
   `npx wrangler d1 execute crm-sda --remote --file=.wrangler/prospection/import-dbpr.sql`.
   Le gabarit de colonnes `scripts/prospection/dbpr-layout.json` se remplit depuis la doc officielle du DBPR.
-- **enrich** (Worker `workers/prospection/`, cron + file) : crawl poli et extraction des signaux par règles.
-  Tests : `npm run prospect:test`. Mesure sur de vrais sites : `npm run prospect:measure -- https://… https://…`.
+- **Recherche du site** (Mojeek, verrouillée tant que `search_provider_terms_read` et `search_endpoint_verified` = 0
+  et sans clé `MOJEEK_API_KEY`) : `node scripts/prospection/run-search.mjs`. Deux signaux (nom + ville ou licence)
+  → `website_status = accepted` ; un seul → `review` (contrôle humain) ; annuaires et réseaux sociaux exclus.
+  Contrôle : `node scripts/prospection/export-search.mjs`.
+- **enrich** : à la main par lots, `node scripts/prospection/run-enrich.mjs [--batch 25] [--retry-failed]`
+  (mêmes modules que le Worker `workers/prospection/`, qui reste désactivé). Seuls les sites `accepted` sont crawlés.
 - **Contrôle** : `node scripts/prospection/export-evidence.mjs` → CSV de 30 entreprises et leurs preuves.
+- **Tests** : `npm run prospect:test` (crawl, extraction, choix du site) ; `npm run prospect:test:db`
+  (adaptateur SQL, import DBPR ; vide les tables `prospect_*` de la base **locale**).
 
 Le CRM tourne sur Pages, qui ne gère pas les tâches planifiées ni les files : la prospection a donc son Worker,
 relié à la même base. Rien n'est déployé tant que la phase 1 n'est pas validée.
