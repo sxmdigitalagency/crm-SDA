@@ -29,6 +29,13 @@ export interface ProspectConfig {
   stopBounceRate: number;
   stopComplaintRate: number;
   testTotalSends: number;
+  enrichEnabled: boolean;
+  enrichBatchSize: number;
+  crawlPagePatterns: Record<string, string>;
+  crawlMaxBytes: number;
+  bookingWidgetHosts: string[];
+  bookingTextPatterns: string[];
+  chatWidgetHosts: string[];
 }
 
 export class ConfigError extends Error {}
@@ -80,5 +87,12 @@ export async function loadConfig(env: Env): Promise<ProspectConfig> {
     stopBounceRate: num('stop_bounce_rate'),
     stopComplaintRate: num('stop_complaint_rate'),
     testTotalSends: num('test_total_sends'),
+    enrichEnabled: bool('enrich_enabled'),
+    enrichBatchSize: num('enrich_batch_size'),
+    crawlPagePatterns: json('crawl_page_patterns'),
+    crawlMaxBytes: num('crawl_max_bytes'),
+    bookingWidgetHosts: json('booking_widget_hosts'),
+    bookingTextPatterns: json('booking_text_patterns'),
+    chatWidgetHosts: json('chat_widget_hosts'),
   };
 }

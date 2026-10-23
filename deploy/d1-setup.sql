@@ -334,3 +334,12 @@ INSERT INTO prospect_config (key, value) VALUES
   ('stop_complaint_rate', '0.003'),
   ('test_total_sends', '150');
 INSERT INTO d1_migrations (name) VALUES ('0005_prospection.sql');
+INSERT OR IGNORE INTO prospect_config (key, value) VALUES
+  ('enrich_enabled', '0'),
+  ('enrich_batch_size', '10'),
+  ('crawl_page_patterns', '{"contact":"^/contact","about":"^/about","services":"^/services","schedule":"^/schedule","book":"^/book"}'),
+  ('crawl_max_bytes', '1500000'),
+  ('booking_widget_hosts', '["calendly.com","acuityscheduling.com","housecallpro.com","getjobber.com","servicetitan.com","setmore.com","squareup.com/appointments"]'),
+  ('booking_text_patterns', '["schedule service","schedule online","book online","book now","request service online"]'),
+  ('chat_widget_hosts', '["tawk.to","intercom.io","intercomcdn.com","driftt.com","livechatinc.com","tidio.co","podium.com","birdeye.com","zdassets.com","usemessages.com","crisp.chat","olark.com"]');
+INSERT INTO d1_migrations (name) VALUES ('0006_prospection_enrich.sql');

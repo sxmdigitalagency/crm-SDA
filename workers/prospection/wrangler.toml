@@ -1,6 +1,7 @@
 # Worker de prospection (phase 0 : fondations, ne fait rien).
 # Même base D1 que le CRM : les migrations vivent dans ../../migrations et s'appliquent depuis la racine du dépôt.
-# Aucun cron ni Queue tant que les phases suivantes ne sont pas validées par Mathys.
+# Phase 1 : cron + file pour enrich. Le cron ne fait rien tant que prospect_config.enrich_enabled = 0.
+# Pas encore déployé : la file doit d'abord être créée (npx wrangler queues create sda-prospection-enrich).
 name = "sda-prospection"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
@@ -15,3 +16,15 @@ binding = "DB"
 database_name = "crm-sda"
 database_id = "b0fd2569-05f1-4396-b70d-c9306c0c1863"
 migrations_dir = "../../migrations"
+
+[triggers]
+crons = ["*/30 * * * *"]
+
+[[queues.producers]]
+binding = "ENRICH_QUEUE"
+queue = "sda-prospection-enrich"
+
+[[queues.consumers]]
+queue = "sda-prospection-enrich"
+max_batch_size = 1
+max_retries = 2

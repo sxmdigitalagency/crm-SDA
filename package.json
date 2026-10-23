@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.browser.json",
     "deploy": "wrangler pages deploy public",
     "build": "node scripts/build-icons.mjs && esbuild shared/pdf/browser.ts --bundle --format=esm --target=es2020 --minify --legal-comments=eof --outfile=public/js/vendor/pdf.js",
-    "build:d1-setup": "node scripts/build-d1-setup.mjs"
+    "build:d1-setup": "node scripts/build-d1-setup.mjs",
+    "prospect:test": "esbuild workers/prospection/test/enrich.test.ts --bundle --platform=node --format=esm --log-level=warning --outfile=.wrangler/build/enrich.test.mjs && node --test .wrangler/build/enrich.test.mjs",
+    "prospect:measure": "esbuild scripts/prospection/measure-enrich.ts --bundle --platform=node --format=esm --log-level=warning --outfile=.wrangler/build/measure-enrich.mjs && node .wrangler/build/measure-enrich.mjs"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",

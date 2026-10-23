@@ -1,0 +1,22 @@
+{
+  "_source": "À remplir colonne par colonne depuis la documentation officielle du DBPR (page Public Records de Construction Industry), jamais par supposition. Noter ici l'URL et la date de la doc lue.",
+  "_doc_url": null,
+  "_doc_read_on": null,
+  "file_name": null,
+  "has_header_row": null,
+  "columns": {
+    "license_number": null,
+    "class_code": null,
+    "licensee_name": null,
+    "dba_name": null,
+    "city": null,
+    "county": null,
+    "state": null,
+    "status": null,
+    "expiry_date": null
+  },
+  "active_status_values": null,
+  "county_values": "name",
+  "county_codes": null,
+  "expiry_date_format": null
+}

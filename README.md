@@ -126,12 +126,21 @@ Monde visuel « Lagon » : fond vivant turquoise/corail, verre réservé aux sur
 Thème clair / sombre / système. Tokens dans `public/css/tokens.css`, un seul accent à changer.
 Couleurs des séries de graphiques validées (daltonisme, contraste) en clair et en sombre.
 
-## Prospection US (en construction, phase 0)
+## Prospection US (en construction, phase 1)
 
-Pipeline de prospection par email (spec `spec-agents-prospection-us.md`), construit phase par phase.
-Phase 0 seulement : tables `prospect_*` (migration `0005`) dans la même base D1 que le CRM, et un Worker
-`workers/prospection/` qui ne fait rien encore (aucun cron, aucun envoi, `sending_enabled = 0`).
-Les hypothèses (métiers, comtés, cadence, seuils) sont dans la table `prospect_config`, pas dans le code.
+Pipeline de prospection par email, construit phase par phase : spec dans `docs/prospection/spec-agents-prospection-us.md`.
+Tables `prospect_*` (migrations `0005`, `0006`) dans la même base D1 que le CRM ; aucune écriture dans les tables du CRM.
+Les hypothèses (métiers, comtés, cadence, seuils, listes de détection) sont dans `prospect_config`, pas dans le code.
+Envoi et envoi automatique désactivés ; `enrich_enabled = 0` tant que la phase 1 n'est pas validée.
+
+- **discover** (script local, le plan gratuit de Workers n'a pas le temps de calcul pour le fichier complet) :
+  `node scripts/prospection/import-dbpr.mjs --file <fichier DBPR>` puis
+  `python3 scripts/prospection/count-dbpr.py --file <fichier DBPR>` (comptage indépendant), puis
+  `npx wrangler d1 execute crm-sda --remote --file=.wrangler/prospection/import-dbpr.sql`.
+  Le gabarit de colonnes `scripts/prospection/dbpr-layout.json` se remplit depuis la doc officielle du DBPR.
+- **enrich** (Worker `workers/prospection/`, cron + file) : crawl poli et extraction des signaux par règles.
+  Tests : `npm run prospect:test`. Mesure sur de vrais sites : `npm run prospect:measure -- https://… https://…`.
+- **Contrôle** : `node scripts/prospection/export-evidence.mjs` → CSV de 30 entreprises et leurs preuves.
 
 Le CRM tourne sur Pages, qui ne gère pas les tâches planifiées ni les files : la prospection a donc son Worker,
 relié à la même base. Rien n'est déployé tant que la phase 1 n'est pas validée.

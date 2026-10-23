@@ -11,5 +11,6 @@
     "skipLibCheck": true,
     "isolatedModules": true
   },
-  "include": ["functions/**/*.ts", "workers/**/*.ts", "shared/types.ts", "shared/pdf/render.ts"]
+  "include": ["functions/**/*.ts", "workers/**/*.ts", "shared/types.ts", "shared/pdf/render.ts"],
+  "exclude": ["workers/**/test/**"]
 }
