@@ -119,6 +119,13 @@ Le seed de démo refuse de s'exécuter en `--remote` et n'est pas dans `migratio
 5. **TGCA hors de Saint-Martin** : l'application de la TGCA aux prestations facturées à des clients de
    Sint-Maarten n'est pas tranchée dans l'outil — le taux se règle par client.
 
+## Pipeline commercial
+
+Page **Pipeline** : une « affaire » par opportunité (client, montant estimé, devise, date de signature prévue),
+qui avance en six étapes : nouveau contact → besoin qualifié → devis envoyé → négociation → gagnée / perdue.
+Glisser-déposer à la souris ; au clavier ou au doigt, ouvrir la carte et changer « Étape ». Un devis créé depuis une
+affaire lui est relié. Totaux par devise, jamais additionnés entre EUR et USD. Table `deals` (migration `0005_pipeline`).
+
 ## Design
 
 Monde visuel « Lagon » : fond vivant turquoise/corail, verre réservé aux surfaces qui flottent

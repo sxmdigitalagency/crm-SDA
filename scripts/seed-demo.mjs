@@ -55,9 +55,9 @@ const companies = [
 const sql = [
   '-- GÉNÉRÉ PAR scripts/seed-demo.mjs — DONNÉES DE DÉMO, LOCAL UNIQUEMENT',
   'PRAGMA defer_foreign_keys = true;',
-  'DELETE FROM payments; DELETE FROM line_items; DELETE FROM invoices; DELETE FROM quotes;',
+  'DELETE FROM deals; DELETE FROM payments; DELETE FROM line_items; DELETE FROM invoices; DELETE FROM quotes;',
   'DELETE FROM services; DELETE FROM clients; DELETE FROM counters; DELETE FROM sessions;',
-  "DELETE FROM sqlite_sequence WHERE name IN ('payments','line_items','invoices','quotes','services','clients');",
+  "DELETE FROM sqlite_sequence WHERE name IN ('deals','payments','line_items','invoices','quotes','services','clients');",
   `UPDATE settings SET company_name='SXM Digital Agency', company_address='1 rue de l’Exemple\n97150 Marigot, Saint-Martin',
      company_email='contact@sda.example', company_phone='0690 00 00 00', company_website='sda.example',
      siret='000 000 000 00000', iban='FR76 0000 0000 0000 0000 0000 000', tax_label='TGCA', tax_rate=4.0, default_currency='EUR',
@@ -152,6 +152,17 @@ sql.push(`UPDATE clients SET created_at = MIN(created_at, COALESCE((SELECT MIN(i
 sql.push(`UPDATE invoices SET amount_paid = COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = invoices.id), 0);`);
 sql.push(`UPDATE invoices SET status = CASE WHEN amount_paid >= total THEN 'paid' ELSE 'issued' END WHERE status IN ('issued','paid');`);
 for (const [scope, value] of Object.entries(counters)) sql.push(`INSERT INTO counters (scope, value) VALUES (${q(scope)}, ${value});`);
+
+// Pipeline : quelques affaires réparties sur les étapes (dates relatives à aujourd'hui).
+const inDays = (n) => iso(new Date(today.getTime() + n * 864e5));
+[
+  [1, 'Refonte du site vitrine', 'lead', 320000, null], [2, 'Automatisation des relances clients', 'lead', 180000, 21],
+  [3, 'Boutique en ligne', 'qualified', 650000, 30], [4, 'Référencement local', 'qualified', 90000, -3],
+  [5, 'Application de réservation', 'proposal', 1200000, 14], [6, 'Maintenance annuelle', 'negotiation', 240000, 7],
+  [7, 'Site événementiel', 'won', 410000, -10], [8, 'Chatbot WhatsApp', 'lost', 150000, -20],
+].forEach(([client, title, stage, amount, days], i) => sql.push(`INSERT INTO deals (client_id, title, stage, amount, currency, expected_close_date, lost_reason, position, closed_at)
+  SELECT ${client}, ${q(title)}, ${q(stage)}, ${amount}, currency, ${days === null ? 'NULL' : q(inDays(days))}, ${q(stage === 'lost' ? 'Budget reporté à l’an prochain' : '')}, ${i},
+    ${stage === 'won' || stage === 'lost' ? q(inDays(days ?? 0) + ' 10:00:00') : 'NULL'} FROM clients WHERE id = ${client};`));
 
 mkdirSync('.wrangler', { recursive: true });
 writeFileSync('.wrangler/demo-seed.sql', sql.join('\n') + '\n');

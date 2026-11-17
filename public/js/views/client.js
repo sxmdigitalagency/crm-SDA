@@ -1,5 +1,6 @@
 import { api } from '../api.js';
-import { date, money, moneyByCurrency, sumByCurrency } from '../format.js';
+import { date, money, money0, moneyByCurrency, sumByCurrency } from '../format.js';
+import { STAGES } from './pipeline.js';
 import { bindRowLinks, clientName, clientStatus, confirmDialog, errorState, html, ico, invoiceStatus, mount, quoteStatus, toast, toastError } from '../ui.js';
 
 export async function render(root, { match, navigate }) {
@@ -33,6 +34,15 @@ export async function render(root, { match, navigate }) {
           <div class="pulse-item"><span class="pulse-label">Facturé</span><span class="pulse-value num">${moneyByCurrency(invoiced)}</span></div>
           <div class="pulse-item"><span class="pulse-label">Encaissé</span><span class="pulse-value num">${moneyByCurrency(paid)}</span></div>
           <div class="pulse-item"><span class="pulse-label">Reste dû</span><span class="pulse-value num">${moneyByCurrency(due)}</span></div>
+        </section>
+
+        <section class="panel flush glass-panel">
+          <div class="panel-head"><h2>Affaires</h2>
+            ${anonymized ? html`<span class="muted">${c.deals.length}</span>` : html`<a class="btn sm" href="/pipeline?new=1&client=${id}" data-link>${ico('plus', { size: 15 })}Affaire</a>`}</div>
+          ${c.deals.length ? html`<ul class="client-deals">${c.deals.map((d) => html`<li><a href="/pipeline?deal=${d.id}" data-link>
+              <span><strong>${d.title}</strong><br><small>${STAGES.find((s) => s.key === d.stage)?.label ?? d.stage}${d.expected_close_date ? ` · signature prévue le ${date(d.expected_close_date)}` : ''}</small></span>
+              <span class="num">${d.amount ? money0(d.amount, d.currency) : '—'}</span></a></li>`)}</ul>`
+          : html`<p class="muted quiet" style="padding:0 var(--s-6) var(--s-5)">Aucune affaire en cours pour ce client.</p>`}
         </section>
 
         <section class="panel flush glass-panel">

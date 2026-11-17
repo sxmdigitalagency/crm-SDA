@@ -5,7 +5,7 @@ const NAMES = [
   'layout-dashboard', 'users', 'file-text', 'receipt', 'package', 'settings', 'log-out', 'plus', 'search',
   'sun', 'moon', 'monitor', 'trash-2', 'download', 'eye', 'send', 'check', 'x', 'arrow-up-right', 'arrow-down-right',
   'arrow-left', 'arrow-right', 'copy', 'grip-vertical', 'circle-alert', 'clock', 'wallet', 'user-plus', 'file-check',
-  'banknote', 'pencil', 'mail', 'phone', 'building-2', 'user', 'chevron-down', 'minus', 'repeat', 'ban', 'inbox', 'loader-circle',
+  'banknote', 'pencil', 'mail', 'phone', 'building-2', 'user', 'chevron-down', 'minus', 'repeat', 'ban', 'inbox', 'loader-circle', 'kanban', 'calendar',
 ];
 const out = {};
 for (const n of NAMES) {

@@ -170,3 +170,24 @@ Escompte : aucun escompte pour paiement anticipé.'
 WHERE id = 1 AND (invoice_terms = '' OR substr(invoice_terms, 1, 29) = 'En cas de retard de paiement,');
 UPDATE settings SET payment_terms_days = 15 WHERE id = 1 AND payment_terms_days = 30;
 INSERT INTO d1_migrations (name) VALUES ('0004_pdf_identity.sql');
+CREATE TABLE deals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  title TEXT NOT NULL,
+  stage TEXT NOT NULL DEFAULT 'lead'
+    CHECK (stage IN ('lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost')),
+  amount INTEGER NOT NULL DEFAULT 0 CHECK (amount >= 0),
+  currency TEXT NOT NULL DEFAULT 'EUR' CHECK (currency IN ('EUR', 'USD')),
+  expected_close_date TEXT,
+  quote_id INTEGER REFERENCES quotes(id) ON DELETE SET NULL,
+  lost_reason TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  position REAL NOT NULL DEFAULT 0,
+  closed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX idx_deals_stage ON deals(stage, position);
+CREATE INDEX idx_deals_client ON deals(client_id);
+CREATE INDEX idx_deals_quote ON deals(quote_id);
+INSERT INTO d1_migrations (name) VALUES ('0005_pipeline.sql');

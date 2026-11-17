@@ -22,12 +22,13 @@ export async function render(root, { match, query, navigate }) {
   } catch (err) { mount(root, errorState(err)); return; }
 
   const presetClient = Number(query.get('client')) || null;
+  const presetDeal = Number(query.get('deal')) || null; // devis créé depuis une affaire du pipeline
   const clientDefaults = (cid) => {
     const c = clients.find((x) => x.id === Number(cid));
     return { currency: c?.currency ?? settings.default_currency, tax_rate: c?.tax_rate ?? settings.tax_rate };
   };
   const d = doc ?? {
-    client_id: presetClient ?? '', title: '', notes: '', discount: 0, status: 'draft', ...clientDefaults(presetClient),
+    client_id: presetClient ?? '', title: query.get('title') ?? '', notes: '', discount: 0, status: 'draft', ...clientDefaults(presetClient),
     issue_date: today(), valid_until: addDays(today(), settings.quote_validity_days), lines: [],
     amount_paid: 0, payments: [],
   };
@@ -272,7 +273,7 @@ export async function render(root, { match, query, navigate }) {
     if (!p.client_id) { err.textContent = 'Choisissez un client.'; form.client_id.focus(); return null; }
     if (!p.lines.length) { err.textContent = 'Ajoutez au moins une ligne avec une désignation.'; linesEl.querySelector('.line-desc')?.focus(); return null; }
     try {
-      const res = id ? await api.put(`${endpoint}/${id}`, p) : await api.post(endpoint, p);
+      const res = id ? await api.put(`${endpoint}/${id}`, p) : await api.post(endpoint, { ...p, deal_id: isQuote ? presetDeal : undefined });
       dirty = false;
       return res;
     } catch (e) { err.textContent = e.message; toastError(e); return null; }

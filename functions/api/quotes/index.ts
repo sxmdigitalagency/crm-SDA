@@ -39,6 +39,12 @@ export const onRequestPost: Handler = async ({ request, env }) => {
   ).bind(number, clientId, str(body.title, 300), issue, validUntil, tax_rate, currency, discount,
     totals.subtotal, totals.tax_amount, totals.total, str(body.notes, 5000)).first<{ id: number }>();
 
-  await env.DB.batch(lineStatements(env.DB, 'quote', row!.id, lines));
+  // Devis créé depuis une affaire du pipeline : on les relie (même client, affaire sans devis).
+  const dealId = body.deal_id ? toId(body.deal_id) : null;
+  await env.DB.batch([
+    ...lineStatements(env.DB, 'quote', row!.id, lines),
+    ...(dealId ? [env.DB.prepare(`UPDATE deals SET quote_id = ?, updated_at = datetime('now') WHERE id = ? AND client_id = ? AND quote_id IS NULL`)
+      .bind(row!.id, dealId, clientId)] : []),
+  ]);
   return json({ id: row!.id, number }, { status: 201 });
 };

@@ -6,11 +6,12 @@ export const onRequestGet: Handler = async ({ params, env }) => {
   const id = toId(params.id);
   const client = await env.DB.prepare('SELECT * FROM clients WHERE id = ?').bind(id).first();
   if (!client) return error(404, 'Client introuvable');
-  const [quotes, invoices] = await Promise.all([
+  const [quotes, invoices, deals] = await Promise.all([
     env.DB.prepare('SELECT id, number, title, status, issue_date, valid_until, total, currency FROM quotes WHERE client_id = ? ORDER BY issue_date DESC, id DESC').bind(id).all(),
     env.DB.prepare('SELECT id, number, title, status, issue_date, due_date, total, amount_paid, currency FROM invoices WHERE client_id = ? ORDER BY COALESCE(issue_date, created_at) DESC, id DESC').bind(id).all(),
+    env.DB.prepare('SELECT id, title, stage, amount, currency, expected_close_date FROM deals WHERE client_id = ? ORDER BY closed_at IS NOT NULL, updated_at DESC').bind(id).all(),
   ]);
-  return json({ ...client, quotes: quotes.results, invoices: invoices.results });
+  return json({ ...client, quotes: quotes.results, invoices: invoices.results, deals: deals.results });
 };
 
 export const onRequestPut: Handler = async ({ params, request, env }) => {
@@ -38,9 +39,14 @@ export const onRequestDelete: Handler = async ({ params, env }) => {
   ).bind(id).first<{ n: number }>();
 
   if (!refs?.n) {
-    await env.DB.prepare('DELETE FROM clients WHERE id = ?').bind(id).run();
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM deals WHERE client_id = ?').bind(id),
+      env.DB.prepare('DELETE FROM clients WHERE id = ?').bind(id),
+    ]);
     return json({ deleted: true });
   }
+  // Les notes d'affaires peuvent contenir des données personnelles : effacées avec le reste.
+  await env.DB.prepare(`UPDATE deals SET notes = '', updated_at = datetime('now') WHERE client_id = ?`).bind(id).run();
   await env.DB.prepare(
     `UPDATE clients SET first_name = '', last_name = 'Client anonymisé', email = '', phone = '', address = '',
        postal_code = '', notes = '', status = 'inactive', anonymized_at = datetime('now'), updated_at = datetime('now')

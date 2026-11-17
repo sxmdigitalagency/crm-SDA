@@ -3,6 +3,7 @@ import { icon } from './icons.js';
 
 const NAV = [
   { href: '/', label: 'Tableau de bord', short: 'Accueil', icon: 'layout-dashboard', match: /^\/$/ },
+  { href: '/pipeline', label: 'Pipeline', icon: 'kanban', match: /^\/pipeline/ },
   { href: '/clients', label: 'Clients', icon: 'users', match: /^\/clients/ },
   { href: '/devis', label: 'Devis', icon: 'file-text', match: /^\/devis/ },
   { href: '/factures', label: 'Factures', icon: 'receipt', match: /^\/factures/ },
@@ -12,6 +13,7 @@ const NAV = [
 
 const ROUTES = [
   [/^\/$/, () => import('./views/dashboard.js')],
+  [/^\/pipeline$/, () => import('./views/pipeline.js')],
   [/^\/clients$/, () => import('./views/clients.js')],
   [/^\/clients\/(new|\d+\/edit)$/, () => import('./views/client-form.js')],
   [/^\/clients\/(\d+)$/, () => import('./views/client.js')],
